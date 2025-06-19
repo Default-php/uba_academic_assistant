@@ -12,7 +12,12 @@ from .serializers import (
 
 
 def api_root(request):
-    return JsonResponse({"message": "¡El asistente académico está activo!"})
+    return JsonResponse({
+        "message": "¡El asistente académico está activo!",
+        "swagger": "/swagger/",
+        "admin": "/admin/",
+        "api": "/api/"
+    })
 
 
 class UserViewSet(viewsets.ModelViewSet):
