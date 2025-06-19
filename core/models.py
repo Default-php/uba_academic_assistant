@@ -1,4 +1,5 @@
 from django.db import models
+from django.core.validators import MinValueValidator, MaxValueValidator
 
 class User(models.Model):
     """Estudiantes registrados en la app."""
@@ -8,9 +9,11 @@ class User(models.Model):
     correo = models.EmailField(unique=True)
     clave_encriptada = models.CharField(max_length=255)
     carrera = models.CharField(max_length=100, null=True, blank=True)
-    semestre = models.PositiveSmallIntegerField(null=True, blank=True)
+    trimestre = models.PositiveSmallIntegerField(
+        validators=[MinValueValidator(1), MaxValueValidator(12)],
+        null=True,
+        blank=True)    
     fecha_registro = models.DateTimeField(auto_now_add=True)
-
     def __str__(self):
         return self.nombre_completo
 
@@ -20,7 +23,10 @@ class Subject(models.Model):
     id = models.AutoField(primary_key=True)
     codigo = models.CharField(max_length=20, unique=True)
     nombre = models.CharField(max_length=100, unique=True)
-    semestre = models.PositiveSmallIntegerField()
+    trimestre = models.PositiveSmallIntegerField(
+        validators=[MinValueValidator(1), MaxValueValidator(12)],
+        null=True,
+        blank=True)
     creditos = models.PositiveSmallIntegerField()
     docente_nombre = models.CharField(max_length=100)  # solo se guarda el nombre
 
@@ -33,7 +39,10 @@ class Inscription(models.Model):
     id = models.AutoField(primary_key=True)
     usuario = models.ForeignKey(User, on_delete=models.CASCADE)
     subject = models.ForeignKey(Subject, on_delete=models.CASCADE)
-    trimestre = models.CharField(max_length=3, choices=[('I', 'I'), ('II', 'II'), ('III', 'III')])
+    trimestre = models.PositiveSmallIntegerField(
+        validators=[MinValueValidator(1), MaxValueValidator(12)],
+        null=True,
+        blank=True)    
     año_academico = models.CharField(max_length=9)  # Ej: "2024-2025"
     seccion = models.CharField(max_length=5, null=True, blank=True)
     estado = models.CharField(max_length=10, choices=[('inscrita', 'Inscrita'), ('retirada', 'Retirada')], default='inscrita')
