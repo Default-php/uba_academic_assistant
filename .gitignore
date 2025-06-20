@@ -1,0 +1,23 @@
+# Entorno virtual
+env/
+venv/
+ENV/
+*.pyc
+__pycache__/
+
+# Archivos de entorno y variables secretas
+.env
+
+# Archivos del sistema
+.DS_Store
+Thumbs.db
+
+# Archivos de configuración de VSCode (opcional)
+.vscode/
+
+# SQLite (si llegas a usarlo para pruebas locales)
+*.sqlite3
+
+# Archivos de migración innecesarios (opcional si generas y limpias)
+**/migrations/*.pyc
+**/migrations/__pycache__/
