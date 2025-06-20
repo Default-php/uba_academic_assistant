@@ -7,6 +7,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 LOGIN_URL = "https://pregrado.campusvirtualuba.net.ve/trimestre/login/index.php"
+COURSES_URL = "https://pregrado.campusvirtualuba.net.ve/trimestre/my/courses.php"
 
 # Datos de login
 USERNAME = os.getenv("UBA_USERNAME")
@@ -37,23 +38,40 @@ def iniciar_sesion_uba():
     # Enviar la solicitud de login (POST)
     login_response = session.post(LOGIN_URL, data=payload)
 
-    if "dashboard" in login_response.url or "my" in login_response.url:
+    if login_response.url.startswith("https://pregrado.campusvirtualuba.net.ve/trimestre/my/"):
         print("Inicio de sesión exitoso ✔")
-    elif "login" in login_response.url:
+        return session
+    else:
         print("❌ Inicio de sesión fallido. Revisa tus credenciales.")
         return None
-    else:
-        print("Inicio de sesión realizado, pero no se pudo verificar completamente.")
 
-    return session  # Se puede usar luego para navegar páginas internas
+
+def obtener_materias(session):
+    """
+    Extrae la lista de materias inscritas desde la página de cursos.
+    Devuelve una lista de diccionarios con 'id' y 'nombre'.
+    """
+    resp = session.get(COURSES_URL)
+    soup = BeautifulSoup(resp.text, 'html.parser')
+
+    materias = []
+    for a in soup.select('a.coursename[href*="course/view.php?id="]'):
+        href = a.get('href', '')
+        span = a.find('span', class_='multiline')
+        nombre = span.get_text(strip=True) if span else "Sin nombre"
+        if 'id=' in href:
+            course_id = href.split('id=')[-1]
+            materias.append({'id': course_id, 'nombre': nombre})
+
+    return materias
+
 
 
 if __name__ == "__main__":
     sesion = iniciar_sesion_uba()
     if sesion:
-        print("Sesión iniciada, puedes continuar extrayendo contenido...")
-    #    dashboard_url = "https://pregrado.campusvirtualuba.net.ve/trimestre/my/"  # probable
-    #    res = sesion.get(dashboard_url)
-    #    print(res.text)  # esto imprimirá el HTML del panel
-        
-        
+        materias = obtener_materias(sesion)
+        print("Materias encontradas:")
+        for m in materias:
+            print(f"- {m['id']}: {m['nombre']}")
+        # Aquí podrías llamar a tu ORM para guardar cada materia en tu modelo Subject
