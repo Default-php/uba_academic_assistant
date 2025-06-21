@@ -28,7 +28,7 @@ class Subject(models.Model):
         null=True,
         blank=True)
     creditos = models.PositiveSmallIntegerField(null= True, blank= True)
-    docente_nombre = models.CharField(max_length=100)  # solo se guarda el nombre
+    profesor = models.CharField(max_length=100, null= True, blank= True)  # solo se guarda el nombre
 
     def __str__(self):
         return f"{self.codigo} - {self.nombre}"
