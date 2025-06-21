@@ -63,6 +63,7 @@ class Evaluation(models.Model):
     seccion = models.CharField(max_length=50, null=True, blank=True) # <--- NUEVO
     profesor = models.CharField(max_length=100, null=True, blank=True) # <--- NUEVO
     porcentaje = models.CharField(max_length=10, null=True, blank=True) # <--- NUEVO    
+    contenido = models.TextField(blank=True, null=True) # <--- NUEVO   
     fecha_inicio = models.CharField(max_length=100, null=True, blank=True)
     fecha_cierre = models.CharField(max_length=100, null=True, blank=True)
 
