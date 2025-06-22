@@ -1,19 +1,45 @@
 from django.db import models
 from django.core.validators import MinValueValidator, MaxValueValidator
+from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin, BaseUserManager
 
-class User(models.Model):
-    """Estudiantes registrados en la app."""
-    id = models.AutoField(primary_key=True)
-    nombre_completo = models.CharField(max_length=100)
+class CustomUserManager(BaseUserManager):
+    def create_user(self, ci, nombre_completo, correo, password=None, **extra_fields):
+        if not ci:
+            raise ValueError('El usuario debe tener una cédula')
+        if not correo:
+            raise ValueError('El usuario debe tener un correo')
+
+        email = self.normalize_email(correo)
+        user = self.model(ci=ci, nombre_completo=nombre_completo, correo=email, **extra_fields)
+        user.set_password(password)
+        user.save(using=self._db)
+        return user
+
+    def create_superuser(self, ci, nombre_completo, correo, password=None, **extra_fields):
+        extra_fields.setdefault('is_staff', True)
+        extra_fields.setdefault('is_superuser', True)
+
+        return self.create_user(ci, nombre_completo, correo, password, **extra_fields)
+
+class User(AbstractBaseUser, PermissionsMixin):
     ci = models.CharField(max_length=15, unique=True)
+    nombre_completo = models.CharField(max_length=100)
     correo = models.EmailField(unique=True)
-    clave_encriptada = models.CharField(max_length=255)
     carrera = models.CharField(max_length=100, null=True, blank=True)
     trimestre = models.PositiveSmallIntegerField(
         validators=[MinValueValidator(1), MaxValueValidator(12)],
         null=True,
-        blank=True)    
+        blank=True)
     fecha_registro = models.DateTimeField(auto_now_add=True)
+
+    is_active = models.BooleanField(default=True)
+    is_staff = models.BooleanField(default=False)
+
+    objects = CustomUserManager()
+
+    USERNAME_FIELD = 'ci'  # Campo para login
+    REQUIRED_FIELDS = ['nombre_completo', 'correo']
+
     def __str__(self):
         return self.nombre_completo
 
