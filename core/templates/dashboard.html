@@ -1,44 +1,45 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="es">
 
 <head>
     <meta charset="UTF-8">
-    <title>Panel de Usuario</title>
-    {% load static %}
-    <!-- Tip: Puedes conservar Bootstrap si lo necesitas o reemplazarlo -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
-    <!-- Enlaza el CSS compilado de Tailwind -->
+    <title>Dashboard Académico</title>
     <link rel="stylesheet" href="{% static 'css/output.css' %}">
 </head>
 
-<body>
-    <div class="container mt-4">
-        <h1 class="mb-4">📊 Panel del Estudiante</h1>
-        <div class="row">
+<body class="bg-gray-100 text-gray-900">
+
+    <div class="container mx-auto px-4 py-6">
+        <h1 class="text-3xl font-bold mb-6">📚 Mis materias</h1>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {% for subject in subjects %}
-            <div class="col-md-6 mb-3">
-                <div class="card shadow-sm">
-                    <div class="card-body">
-                        <h5 class="card-title">{{ subject.nombre }}</h5>
-                        <p class="card-text">Trimestre: {{ subject.trimestre }}</p>
-                        <p class="card-text">Profesor: {{ subject.profesor }}</p>
-                        {% if subject.evaluaciones.count %}
-                        <p class="card-text">
-                            Evaluaciones registradas: {{ subject.evaluaciones.count }}
-                        </p>
-                        {% else %}
-                        <p class="text-muted">Sin evaluaciones aún.</p>
+            <div class="bg-white rounded-2xl shadow p-5">
+                <h2 class="text-xl font-semibold text-indigo-600">{{ subject.nombre }}</h2>
+                <p class="text-sm text-gray-500 mb-2">Trimestre {{ subject.trimestre }}</p>
+                {% if subject.profesor %}
+                <p class="text-sm mb-4">👨‍🏫 Profesor: {{ subject.profesor }}</p>
+                {% endif %} {% if subject.evaluations.all %}
+                <div class="space-y-2">
+                    {% for eval in subject.evaluations.all %}
+                    <div class="bg-indigo-50 rounded p-3">
+                        <p class="font-medium">{{ eval.titulo }}</p>
+                        <p class="text-sm text-gray-600">{{ eval.fecha_inicio|date:"d/m/Y" }} - {{ eval.fecha_cierre|date:"d/m/Y" }}</p>
+                        {% if eval.porcentaje %}
+                        <p class="text-sm text-indigo-700 font-semibold">💯 {{ eval.porcentaje }}%</p>
                         {% endif %}
                     </div>
+                    {% endfor %}
                 </div>
-            </div>
-            {% empty %}
-            <div class="col-12">
-                <p>No se encontraron materias registradas.</p>
+                {% else %}
+                <p class="text-gray-500">No hay evaluaciones registradas.</p>
+                {% endif %}
             </div>
             {% endfor %}
         </div>
     </div>
+
 </body>
 
 </html>
