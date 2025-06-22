@@ -2,30 +2,52 @@ from django.core.management.base import BaseCommand
 from core.models import Subject, Evaluation
 from core.utils.selenium_setup import iniciar_sesion, ir_a_url
 from core.utils.parser_evaluations import parse_evaluation_text
+from urllib.parse import urljoin
+from bs4 import BeautifulSoup
 
 from selenium.webdriver.common.by import By
 from selenium.common.exceptions import NoSuchElementException
+import urllib.parse
+import os
+import requests
 import time
+import re
 
+def remove_time_param(url):
+    """
+    Remueve el parámetro 'time' de la URL, si existe.
+    """
+    parsed_url = urllib.parse.urlparse(url)
+    query_params = urllib.parse.parse_qs(parsed_url.query)
+    if 'time' in query_params:
+        del query_params['time']
+    new_query = urllib.parse.urlencode(query_params, doseq=True)
+    return urllib.parse.urlunparse(parsed_url._replace(query=new_query))
 
 class Command(BaseCommand):
-    help = "Sincroniza las evaluaciones desde Moodle"
+    help = "Sincroniza las evaluaciones desde Moodle y descarga imágenes localmente"
 
     def handle(self, *args, **options):
         print("🔄 Iniciando sincronización de evaluaciones...")
 
+        BASE_URL = "https://pregrado.campusvirtualuba.net.ve/trimestre/"
         driver = iniciar_sesion()
+
+        # Creamos una sesión de requests y agregamos las cookies de Selenium para mantener la autenticación.
+        session = requests.Session()
+        for cookie in driver.get_cookies():
+            session.cookies.set(cookie['name'], cookie['value'])
+
         subjects = Subject.objects.all()
 
         for subject in subjects:
-            course_url = f"https://pregrado.campusvirtualuba.net.ve/trimestre/course/view.php?id={subject.codigo}"
+            course_url = f"{BASE_URL}course/view.php?id={subject.codigo}"
             ir_a_url(driver, course_url)
             time.sleep(2)
 
             evaluaciones = driver.find_elements(By.CSS_SELECTOR, 'li.activity.assign a.aalink')
 
             for i in range(len(evaluaciones)):
-                # Capturar el elemento nuevamente para evitar stale reference
                 evaluaciones = driver.find_elements(By.CSS_SELECTOR, 'li.activity.assign a.aalink')
                 enlace = evaluaciones[i]
 
@@ -41,12 +63,69 @@ class Command(BaseCommand):
 
                     datos = parse_evaluation_text(titulo_raw)
 
-                    # Ir a la página de contenido
+                    # Ir a la página del contenido
                     ir_a_url(driver, href)
                     time.sleep(2)
+
                     try:
-                        div_contenido = driver.find_element(By.CLASS_NAME, "box.generalbox")
-                        contenido_html = div_contenido.get_attribute("outerHTML")
+                        div_contenido = driver.find_element(By.CSS_SELECTOR, ".box.generalbox")
+                        contenido_html = div_contenido.get_attribute("innerHTML")
+
+                        soup = BeautifulSoup(contenido_html, "html.parser")
+                        images_found = soup.find_all("img")
+                        print(f"Encontradas {len(images_found)} imágenes en la evaluación: {titulo_raw}")
+
+                        for j, img in enumerate(images_found):
+                            src = img.get("src", "")
+                            if src.startswith("/"):
+                                src = urljoin(BASE_URL, src)
+                            src_clean = remove_time_param(src)
+
+                            try:
+                                response = session.get(src_clean, stream=True)
+                                response.raise_for_status()
+                                content_type = response.headers.get("Content-Type", "").lower()
+                                if not content_type.startswith("image/"):
+                                    print(f"El recurso en {src_clean} no es una imagen (Content-Type: {content_type}). Se omite.")
+                                    continue
+
+                                # Obtenemos el nombre original y la extensión
+                                original_filename = os.path.basename(urllib.parse.urlparse(src_clean).path)
+                                base_filename, ext = os.path.splitext(original_filename)
+                                if not ext:
+                                    if content_type == "image/png":
+                                        ext = ".png"
+                                    elif content_type in ("image/jpeg", "image/jpg"):
+                                        ext = ".jpg"
+                                    elif content_type == "image/gif":
+                                        ext = ".gif"
+                                    else:
+                                        ext = ".png"
+                                    original_filename = base_filename + ext
+
+                                # Sanitizamos el nombre para que no tenga espacios ni caracteres extraños.
+                                safe_base_filename = re.sub(r'\s+', '_', base_filename)
+                                safe_base_filename = re.sub(r'[^\w\-]', '', safe_base_filename)
+
+                                new_filename = f"evaluation_{moodle_id}_{j}_{safe_base_filename}{ext}"
+
+                                local_dir = os.path.join("media", "evaluaciones")
+                                if not os.path.exists(local_dir):
+                                    os.makedirs(local_dir)
+
+                                local_path = os.path.join(local_dir, new_filename)
+                                with open(local_path, "wb") as f:
+                                    for chunk in response.iter_content(chunk_size=8192):
+                                        f.write(chunk)
+
+                                local_url = f"/media/evaluaciones/{new_filename}"
+                                img["src"] = local_url
+                                print("Imagen descargada y procesada:", img["src"])
+
+                            except Exception as img_ex:
+                                print(f"❌ Error al descargar la imagen {src_clean}: {img_ex}")
+
+                        contenido_html = str(soup)
                     except NoSuchElementException:
                         contenido_html = ""
 
@@ -70,7 +149,6 @@ class Command(BaseCommand):
                     estado = "✔ Creada" if creada else "⏩ Actualizada"
                     print(f"{estado}: {titulo_raw} (ID {moodle_id})")
 
-                    # Volver a la lista de evaluaciones para el siguiente enlace
                     ir_a_url(driver, course_url)
                     time.sleep(2)
 

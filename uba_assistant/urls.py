@@ -2,6 +2,8 @@ from django.contrib import admin
 from django.urls import path, include
 from django.http import JsonResponse
 from core.view.dashboard import dashboard_view
+from django.conf import settings
+from django.conf.urls.static import static
 
 # Swagger (drf-yasg)
 from rest_framework import permissions
@@ -34,4 +36,6 @@ urlpatterns = [
     path("dashboard/", dashboard_view, name="dashboard")
 ]
 
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
