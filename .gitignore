@@ -8,6 +8,9 @@ __pycache__/
 # Archivos de entorno y variables secretas
 .env
 
+# Librerías de Node.js
+node_modules/
+
 # Archivos del sistema
 .DS_Store
 Thumbs.db
@@ -15,7 +18,7 @@ Thumbs.db
 # Archivos de configuración de VSCode (opcional)
 .vscode/
 
-# SQLite (si llegas a usarlo para pruebas locales)
+# SQLite (para pruebas locales)
 *.sqlite3
 
 # Archivos de migración innecesarios (opcional si generas y limpias)
