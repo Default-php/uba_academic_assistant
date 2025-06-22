@@ -6,7 +6,7 @@
     <meta charset="UTF-8">
     <title>Panel Académico</title>
     <link href="{% static 'css/output.css' %}" rel="stylesheet">
-    <!-- Definición de .hidden por si acaso -->
+    <!-- Se agrega un estilo para la clase hidden en caso de que Tailwind no la incluya -->
     <style>
         .hidden {
             display: none !important;
@@ -17,69 +17,88 @@
 <body class="bg-gray-50 text-gray-900">
     <div class="max-w-6xl mx-auto px-4 py-8">
         <h1 class="text-4xl font-bold mb-6">📚 Evaluaciones por Materia</h1>
-
         {% for subject in subjects %}
         <div class="mb-8 bg-white shadow-lg rounded-lg p-6">
-            <h2 class="text-2xl font-semibold mb-4 text-blue-700">{{ subject.nombre }}</h2>
-
-            {% if subject.evaluations.all %}
-            <ul class="space-y-4">
-                {% for evaluation in subject.evaluations.all %}
-                <li class="border rounded p-4 hover:bg-gray-50 transition">
-                    <div class="flex justify-between items-center">
-                        <div>
-                            <h3 class="text-lg font-bold">{{ evaluation.titulo }}</h3>
-                            <p class="text-sm text-gray-600">
-                                <strong>Tipo:</strong> {{ evaluation.tipo }} &nbsp;|
-                                <strong>Unidad:</strong> {{ evaluation.unidad }} &nbsp;|
-                                <strong>Fecha:</strong> {{ evaluation.fecha_inicio|date:"d/m/Y" }} - {{ evaluation.fecha_cierre|date:"d/m/Y" }}
-                            </p>
+            <div class="flex justify-between items-center">
+                <h2 class="text-2xl font-semibold text-blue-700">{{ subject.nombre }}</h2>
+                <button class="subject-expand-btn bg-green-500 text-white px-3 py-1 rounded" data-target="subject-{{ subject.pk }}">
+                    Expand
+                </button>
+            </div>
+            <!-- Lista de evaluaciones oculta inicialmente -->
+            <div id="subject-{{ subject.pk }}" class="subject-evaluations hidden">
+                {% if subject.evaluations.all %}
+                <ul class="space-y-4">
+                    {% for evaluation in subject.evaluations.all %}
+                    <li class="border rounded p-4 hover:bg-gray-50 transition">
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <h3 class="text-lg font-bold">{{ evaluation.titulo }}</h3>
+                                <p class="text-sm text-gray-600">
+                                    <strong>Tipo:</strong> {{ evaluation.tipo }} &nbsp;|
+                                    <strong>Unidad:</strong> {{ evaluation.unidad }} &nbsp;|
+                                    <strong>Fecha:</strong> {{ evaluation.fecha_inicio|date:"d/m/Y" }} - {{ evaluation.fecha_cierre|date:"d/m/Y" }}
+                                </p>
+                            </div>
+                            <button class="expand-btn bg-blue-500 text-white px-3 py-1 rounded" data-target="evaluation-{{ evaluation.pk }}">
+                                Expand
+                            </button>
                         </div>
-                        <button class="expand-btn bg-blue-500 text-white px-3 py-1 rounded" data-target="evaluation-{{ evaluation.pk }}">
-                            Expand
-                        </button>
-                    </div>
-                    <!-- Vista previa truncada -->
-                    <div class="mt-2 text-sm text-gray-700 evaluation-preview">
-                        {{ evaluation.contenido_html|safe|truncatechars_html:300 }}
-                    </div>
-                    <!-- Contenido completo, oculto inicialmente -->
-                    <div id="evaluation-{{ evaluation.pk }}" class="mt-2 text-sm text-gray-700 evaluation-full hidden">
-                        {{ evaluation.contenido_html|safe }}
-                    </div>
-                </li>
-                {% endfor %}
-            </ul>
-            {% else %}
-            <p class="text-gray-500">No hay evaluaciones registradas.</p>
-            {% endif %}
+                        <!-- Vista previa truncada -->
+                        <div class="mt-2 text-sm text-gray-700 evaluation-preview">
+                            {{ evaluation.contenido_html|safe|truncatechars_html:300 }}
+                        </div>
+                        <!-- Contenido completo oculto inicialmente -->
+                        <div id="evaluation-{{ evaluation.pk }}" class="mt-2 text-sm text-gray-700 evaluation-full hidden">
+                            {{ evaluation.contenido_html|safe }}
+                        </div>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <p class="text-gray-500">No hay evaluaciones registradas.</p>
+                {% endif %}
+            </div>
         </div>
         {% endfor %}
     </div>
 
-    <!-- Script para manejar la alternancia (toggle) -->
+    <!-- Script para manejar la expansión/contracción -->
     <script>
         document.addEventListener('DOMContentLoaded', function() {
+            // Toggle para las evaluaciones individuales dentro de cada materia
             document.querySelectorAll('.expand-btn').forEach(function(button) {
                 button.addEventListener('click', function() {
                     var targetId = button.getAttribute('data-target');
                     var fullContent = document.getElementById(targetId);
-                    // Buscamos el contenedor de la vista previa en el mismo card:
+                    // Buscamos el contenedor de la vista previa (dentro del mismo card de evaluación)
                     var previewContent = fullContent.parentElement.querySelector('.evaluation-preview');
-
                     if (fullContent.classList.contains('hidden')) {
-                        // Con expand: oculta la vista previa y muestra el contenido completo
                         fullContent.classList.remove('hidden');
                         if (previewContent) {
                             previewContent.classList.add('hidden');
                         }
                         button.textContent = 'Collapse';
                     } else {
-                        // Con collapse: oculta el contenido completo y muestra la vista previa
                         fullContent.classList.add('hidden');
                         if (previewContent) {
                             previewContent.classList.remove('hidden');
                         }
+                        button.textContent = 'Expand';
+                    }
+                });
+            });
+
+            // Toggle para las materias: mostrar/ocultar las evaluaciones de la materia
+            document.querySelectorAll('.subject-expand-btn').forEach(function(button) {
+                button.addEventListener('click', function() {
+                    var targetId = button.getAttribute('data-target');
+                    var subjectContent = document.getElementById(targetId);
+                    if (subjectContent.classList.contains('hidden')) {
+                        subjectContent.classList.remove('hidden');
+                        button.textContent = 'Collapse';
+                    } else {
+                        subjectContent.classList.add('hidden');
                         button.textContent = 'Expand';
                     }
                 });
