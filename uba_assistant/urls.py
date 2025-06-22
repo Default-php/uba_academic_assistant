@@ -1,6 +1,7 @@
 from django.contrib import admin
 from django.urls import path, include
 from django.http import JsonResponse
+from core.view.dashboard import dashboard_view
 
 # Swagger (drf-yasg)
 from rest_framework import permissions
@@ -30,6 +31,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', include('core.urls')),
     path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
+    path("dashboard/", dashboard_view, name="dashboard")
 ]
 
 
