@@ -24,3 +24,6 @@ Thumbs.db
 # Archivos de migración innecesarios (opcional si generas y limpias)
 **/migrations/*.pyc
 **/migrations/__pycache__/
+
+# Contenido generado dinámicamente
+/media/evaluaciones/
