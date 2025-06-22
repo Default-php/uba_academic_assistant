@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Panel de Usuario</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+</head>
+
+<body>
+    <div class="container mt-4">
+        <h1 class="mb-4">📊 Panel del Estudiante</h1>
+
+        <div class="row">
+            {% for subject in subjects %}
+            <div class="col-md-6 mb-3">
+                <div class="card shadow-sm">
+                    <div class="card-body">
+                        <h5 class="card-title">{{ subject.nombre }}</h5>
+                        <p class="card-text">Trimestre: {{ subject.trimestre }}</p>
+                        <p class="card-text">Profesor: {{ subject.profesor }}</p>
+
+                        {% if subject.evaluaciones.count %}
+                        <p class="card-text">
+                            Evaluaciones registradas: {{ subject.evaluaciones.count }}
+                        </p>
+                        {% else %}
+                        <p class="text-muted">Sin evaluaciones aún.</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="col-12">
+                <p>No se encontraron materias registradas.</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</body>
+
+</html>
