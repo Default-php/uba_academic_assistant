@@ -1,5 +1,6 @@
 from django.http import JsonResponse
 from rest_framework import viewsets
+from django.db.models import Prefetch
 from .models import (
     User, Subject, Inscription, Evaluation,
     Grade, ConsultationResource, AgentInteraction
@@ -24,11 +25,14 @@ class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserSerializer
 
-
 class SubjectViewSet(viewsets.ModelViewSet):
-    queryset = Subject.objects.all()
+    queryset = Subject.objects.prefetch_related(
+        Prefetch(
+            'evaluations',  # <- El nombre que definiste en related_name
+            queryset=Evaluation.objects.order_by('fecha_inicio')
+        )
+    )
     serializer_class = SubjectSerializer
-
 
 class InscriptionViewSet(viewsets.ModelViewSet):
     queryset = Inscription.objects.all()
