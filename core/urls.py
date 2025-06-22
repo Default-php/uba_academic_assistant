@@ -6,24 +6,36 @@ from rest_framework_simplejwt.views import (
     TokenObtainPairView,
     TokenRefreshView,
 )
-from . import views
+
+from .views import (
+    RegisterView,
+    api_root,
+    UserViewSet,
+    SubjectViewSet,
+    InscriptionViewSet,
+    EvaluationViewSet,
+    GradeViewSet,
+    ConsultationResourceViewSet,
+    AgentInteractionViewSet
+)
+
 
 router = DefaultRouter()
-router.register(r'users', views.UserViewSet)
-router.register(r'subjects', views.SubjectViewSet)
-router.register(r'inscriptions', views.InscriptionViewSet)
-router.register(r'evaluations', views.EvaluationViewSet)
-router.register(r'grades', views.GradeViewSet)
-router.register(r'resources', views.ConsultationResourceViewSet)
-router.register(r'interactions', views.AgentInteractionViewSet)
+router.register(r'users', UserViewSet)
+router.register(r'subjects', SubjectViewSet)
+router.register(r'inscriptions', InscriptionViewSet)
+router.register(r'evaluations', EvaluationViewSet)
+router.register(r'grades', GradeViewSet)
+router.register(r'resources', ConsultationResourceViewSet)
+router.register(r'interactions', AgentInteractionViewSet)
+
 
 urlpatterns = [
-    path('', views.api_root, name='api-root'),
+    path('', api_root, name='api-root'),
     path('', include(router.urls)),
     
-    path('register/', RegisterView.as_view(), name='user-register'),
-
     # Endpoints de autenticación JWT
+    path('register/', RegisterView.as_view(), name='user-register'),
     path('login/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('refresh/', TokenRefreshView.as_view(), name='token_refresh'),
 ]

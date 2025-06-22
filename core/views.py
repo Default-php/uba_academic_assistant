@@ -1,6 +1,13 @@
 from django.http import JsonResponse
 from rest_framework import viewsets
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status
+from rest_framework.parsers import JSONParser  
+from rest_framework.generics import CreateAPIView
 from django.db.models import Prefetch
+from drf_yasg.utils import swagger_auto_schema
+from drf_yasg import openapi
 from .models import (
     User, Subject, Inscription, Evaluation,
     Grade, ConsultationResource, AgentInteraction
@@ -8,7 +15,8 @@ from .models import (
 from .serializers import (
     UserSerializer, SubjectSerializer, InscriptionSerializer,
     EvaluationSerializer, GradeSerializer,
-    ConsultationResourceSerializer, AgentInteractionSerializer
+    ConsultationResourceSerializer, AgentInteractionSerializer,
+    RegisterSerializer
 )
 
 
@@ -20,6 +28,47 @@ def api_root(request):
         "api": "/api/"
     })
 
+class RegisterView(CreateAPIView):
+    serializer_class = RegisterSerializer
+    parser_classes = [JSONParser]
+
+    @swagger_auto_schema(
+        operation_description="Registro de usuario",
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            required=['ci', 'nombre_completo', 'correo', 'password'],
+            properties={
+                'ci': openapi.Schema(
+                    type=openapi.TYPE_STRING,
+                    description="Cédula del usuario"
+                ),
+                'nombre_completo': openapi.Schema(
+                    type=openapi.TYPE_STRING,
+                    description="Nombre completo del usuario"
+                ),
+                'correo': openapi.Schema(
+                    type=openapi.TYPE_STRING,
+                    format="email",
+                    description="Correo electrónico"
+                ),
+                'password': openapi.Schema(
+                    type=openapi.TYPE_STRING,
+                    format="password",
+                    description="Contraseña del usuario"
+                )
+            }
+        ),
+        responses={
+            201: openapi.Response("Usuario creado correctamente"),
+            400: openapi.Response("Bad Request")
+        }
+    )
+    def post(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        if serializer.is_valid():
+            self.perform_create(serializer)
+            return Response({"mensaje": "Usuario creado correctamente"}, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
