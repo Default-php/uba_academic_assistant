@@ -6,10 +6,47 @@
     <meta charset="UTF-8">
     <title>Panel Académico</title>
     <link href="{% static 'css/output.css' %}" rel="stylesheet">
-    <!-- Se agrega un estilo para la clase hidden en caso de que Tailwind no la incluya -->
+    <!-- Definición de .hidden y estilos para los botones toggle -->
     <style>
         .hidden {
             display: none !important;
+        }
+        /* Estilo para el botón toggle (para evaluaciones) */
+        
+        .toggle-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 1.5rem;
+            /* Tamaño adecuado */
+            transition: transform 0.3s ease;
+        }
+        
+        .toggle-btn .chevron {
+            display: inline-block;
+            transition: transform 0.3s ease;
+        }
+        
+        .toggle-btn.rotated .chevron {
+            transform: rotate(180deg);
+        }
+        /* Estilo para el botón de la materia */
+        
+        .subject-toggle-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 1.75rem;
+            transition: transform 0.3s ease;
+        }
+        
+        .subject-toggle-btn .chevron {
+            display: inline-block;
+            transition: transform 0.3s ease;
+        }
+        
+        .subject-toggle-btn.rotated .chevron {
+            transform: rotate(180deg);
         }
     </style>
 </head>
@@ -21,8 +58,9 @@
         <div class="mb-8 bg-white shadow-lg rounded-lg p-6">
             <div class="flex justify-between items-center">
                 <h2 class="text-2xl font-semibold text-blue-700">{{ subject.nombre }}</h2>
-                <button class="subject-expand-btn bg-green-500 text-white px-3 py-1 rounded" data-target="subject-{{ subject.pk }}">
-                    Expand
+                <!-- Botón de toggle para mostrar/ocultar las evaluaciones de la materia -->
+                <button class="subject-toggle-btn" data-target="subject-{{ subject.pk }}">
+                    <span class="chevron">&#9660;</span>
                 </button>
             </div>
             <!-- Lista de evaluaciones oculta inicialmente -->
@@ -40,15 +78,16 @@
                                     <strong>Fecha:</strong> {{ evaluation.fecha_inicio|date:"d/m/Y" }} - {{ evaluation.fecha_cierre|date:"d/m/Y" }}
                                 </p>
                             </div>
-                            <button class="expand-btn bg-blue-500 text-white px-3 py-1 rounded" data-target="evaluation-{{ evaluation.pk }}">
-                                Expand
+                            <!-- Botón toggle para la evaluación -->
+                            <button class="toggle-btn" data-target="evaluation-{{ evaluation.pk }}">
+                                <span class="chevron">&#9660;</span>
                             </button>
                         </div>
                         <!-- Vista previa truncada -->
                         <div class="mt-2 text-sm text-gray-700 evaluation-preview">
                             {{ evaluation.contenido_html|safe|truncatechars_html:300 }}
                         </div>
-                        <!-- Contenido completo oculto inicialmente -->
+                        <!-- Contenido completo, oculto inicialmente -->
                         <div id="evaluation-{{ evaluation.pk }}" class="mt-2 text-sm text-gray-700 evaluation-full hidden">
                             {{ evaluation.contenido_html|safe }}
                         </div>
@@ -63,43 +102,39 @@
         {% endfor %}
     </div>
 
-    <!-- Script para manejar la expansión/contracción -->
+    <!-- Script para manejar la alternancia (toggle) -->
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // Toggle para las evaluaciones individuales dentro de cada materia
-            document.querySelectorAll('.expand-btn').forEach(function(button) {
+            // Toggle para evaluaciones individuales
+            document.querySelectorAll('.toggle-btn').forEach(function(button) {
                 button.addEventListener('click', function() {
                     var targetId = button.getAttribute('data-target');
                     var fullContent = document.getElementById(targetId);
-                    // Buscamos el contenedor de la vista previa (dentro del mismo card de evaluación)
                     var previewContent = fullContent.parentElement.querySelector('.evaluation-preview');
+
                     if (fullContent.classList.contains('hidden')) {
                         fullContent.classList.remove('hidden');
-                        if (previewContent) {
-                            previewContent.classList.add('hidden');
-                        }
-                        button.textContent = 'Collapse';
+                        if (previewContent) previewContent.classList.add('hidden');
+                        button.classList.add('rotated');
                     } else {
                         fullContent.classList.add('hidden');
-                        if (previewContent) {
-                            previewContent.classList.remove('hidden');
-                        }
-                        button.textContent = 'Expand';
+                        if (previewContent) previewContent.classList.remove('hidden');
+                        button.classList.remove('rotated');
                     }
                 });
             });
 
-            // Toggle para las materias: mostrar/ocultar las evaluaciones de la materia
-            document.querySelectorAll('.subject-expand-btn').forEach(function(button) {
+            // Toggle para la materia: mostrar/ocultar evaluaciones
+            document.querySelectorAll('.subject-toggle-btn').forEach(function(button) {
                 button.addEventListener('click', function() {
                     var targetId = button.getAttribute('data-target');
                     var subjectContent = document.getElementById(targetId);
                     if (subjectContent.classList.contains('hidden')) {
                         subjectContent.classList.remove('hidden');
-                        button.textContent = 'Collapse';
+                        button.classList.add('rotated');
                     } else {
                         subjectContent.classList.add('hidden');
-                        button.textContent = 'Expand';
+                        button.classList.remove('rotated');
                     }
                 });
             });

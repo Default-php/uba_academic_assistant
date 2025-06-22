@@ -48,6 +48,7 @@ class Command(BaseCommand):
             evaluaciones = driver.find_elements(By.CSS_SELECTOR, 'li.activity.assign a.aalink')
 
             for i in range(len(evaluaciones)):
+                # Actualizamos la lista en cada iteración
                 evaluaciones = driver.find_elements(By.CSS_SELECTOR, 'li.activity.assign a.aalink')
                 enlace = evaluaciones[i]
 
@@ -71,7 +72,38 @@ class Command(BaseCommand):
                         div_contenido = driver.find_element(By.CSS_SELECTOR, ".box.generalbox")
                         contenido_html = div_contenido.get_attribute("innerHTML")
 
+                        # Procesamos el HTML con BeautifulSoup
                         soup = BeautifulSoup(contenido_html, "html.parser")
+
+                        # --- PROCESAMIENTO DE BLOQUES DE VIDEO ---
+                        # Buscamos todos los bloques cuyo atributo class contenga "mediaplugin_videojs"
+                        video_blocks = soup.find_all("div", class_=lambda x: x and "mediaplugin_videojs" in x)
+                        for video in video_blocks:
+                            # Extraemos todos los iframes en este bloque
+                            iframes = video.find_all("iframe")
+                            if iframes:
+                                # Creamos un contenedor nuevo para los iframes
+                                new_container = soup.new_tag("div", **{"class": "video-embed-group"})
+                                for iframe in iframes:
+                                    src = iframe.get("src")
+                                    if src:
+                                        # Creamos un nuevo iframe limpio, sin gran cantidad de atributos adicionales,
+                                        # con styling inline para limitar el tamaño (puedes ajustar los valores según necesites)
+                                        new_iframe = soup.new_tag("iframe",
+                                                                src=src,
+                                                                frameborder="0",
+                                                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture",
+                                                                allowfullscreen="true",
+                                                                style="width:100%; max-width:600px; height:350px;")
+                                        new_container.append(new_iframe)
+                                # Reemplazamos el bloque completo por nuestro contenedor limpio
+                                video.replace_with(new_container)
+                            else:
+                                # Si no se detectan iframes, eliminamos el bloque para no dejar información inútil
+                                video.decompose()
+                        # --- FIN BLOQUES DE VIDEO ---
+                        
+                        # Procesamos imágenes
                         images_found = soup.find_all("img")
                         print(f"Encontradas {len(images_found)} imágenes en la evaluación: {titulo_raw}")
 
@@ -125,6 +157,7 @@ class Command(BaseCommand):
                             except Exception as img_ex:
                                 print(f"❌ Error al descargar la imagen {src_clean}: {img_ex}")
 
+                        # Reconstruimos el HTML con los cambios (videos limpios e imágenes actualizadas)
                         contenido_html = str(soup)
                     except NoSuchElementException:
                         contenido_html = ""
