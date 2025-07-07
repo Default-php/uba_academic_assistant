@@ -1,7 +1,7 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from .auth_views import RegisterView
-from core.view.dashboard import dashboard_view
+from core.view.dashboard import dashboard_view, register_view, login_view
 from rest_framework_simplejwt.views import (
     TokenObtainPairView,
     TokenRefreshView,
@@ -33,7 +33,7 @@ router.register(r'interactions', AgentInteractionViewSet)
 urlpatterns = [
     path('', api_root, name='api-root'),
     path('', include(router.urls)),
-    
+
     # Endpoints de autenticación JWT
     path('register/', RegisterView.as_view(), name='user-register'),
     path('login/', TokenObtainPairView.as_view(), name='token_obtain_pair'),

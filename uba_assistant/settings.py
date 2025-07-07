@@ -77,7 +77,7 @@ ROOT_URLCONF = 'uba_assistant.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],  # Puedes agregar aquí rutas a tus templates si lo deseas.
+        'DIRS': [],  # añadir rutas a templates
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [

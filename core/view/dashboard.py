@@ -15,3 +15,9 @@ def dashboard_view(request):
         "subjects": subjects
     }
     return render(request, "dashboard.html", context)
+
+def register_view(request):
+    return render(request, 'register.html')
+
+def login_view(request):
+    return render(request, 'login.html')
