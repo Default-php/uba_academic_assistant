@@ -51,16 +51,27 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-
+    'django-q',
+    
     # Apps de terceros
     'rest_framework',
     'drf_yasg',
     'corsheaders',
 
-    # Tu aplicación (ajusta el nombre si no usaste 'core')
+    # Mi aplicación
     'core',
 ]
 INSTALLED_APPS += ['rest_framework_simplejwt.token_blacklist']
+
+Q_CLUSTER = {
+    'name': 'DjangoQCluster',
+    'workers': 4,          # número de procesos worker
+    'timeout': 60,         # tiempo máximo (s) por tarea
+    'retry': 120,          # reintentos en caso de fallo (s)
+    'queue_limit': 50,     # tamaño máximo de cola
+    'bulk': 20,            # cuántas tareas coge cada worker a la vez
+    'orm': 'default',      # usa la base de datos de Django como broker
+}
 
 SIMPLE_JWT = {
   'BLACKLIST_AFTER_ROTATION': True,
