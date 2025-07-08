@@ -1,3 +1,4 @@
+from django_q.tasks import async_task
 from django.http import JsonResponse
 from rest_framework import viewsets
 from rest_framework.views import APIView
@@ -81,6 +82,27 @@ class UserViewSet(viewsets.ModelViewSet):
         # Devuelve los datos del usuario logueado
         serializer = self.get_serializer(request.user)
         return Response(serializer.data)
+
+    @action(detail=False, methods=['post'], url_path='sync')
+    def sync(self, request):
+        async_task(
+            'core.tasks.sync_for_user',
+            request.user.pk,
+            request.data.get('ci'),
+            request.data.get('password')
+        )
+        return Response(
+            {'detail': 'Sincronización en segundo plano iniciada'},
+            status=status.HTTP_202_ACCEPTED
+        )
+
+    @action(detail=False, methods=['get'], url_path='sync-status')
+    def sync_status(self, request):
+        u = request.user
+        return Response({
+            'is_synced':   u.is_synced,
+            'last_synced': u.last_synced.isoformat() if u.last_synced else None
+        })
 
 
 class SubjectViewSet(viewsets.ModelViewSet):

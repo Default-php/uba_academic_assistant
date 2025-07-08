@@ -49,11 +49,11 @@
             </p>
             <div class="space-x-4">
                 <a href="{% url 'login' %}" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
-          Iniciar Sesión
-        </a>
+                    Iniciar Sesión
+                </a>
                 <a href="{% url 'register' %}" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">
-          Crear Cuenta
-        </a>
+                    Crear Cuenta
+                </a>
             </div>
             <p class="text-sm text-gray-500">Con una cuenta podrás:</p>
             <ul class="list-disc list-inside text-gray-600">
@@ -66,9 +66,17 @@
         <!-- BLOQUE DASHBOARD (autenticado) -->
         <div id="dashboard-container" class="hidden">
             <p id="welcome" class="mb-4 text-xl">Bienvenido, …</p>
-            <button id="logout-btn" class="mb-6 bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700">
-        Cerrar sesión
-      </button>
+            <div class="flex items-center space-x-4 mb-6">
+                <button id="sync-btn" class="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700">
+                    Sincronizar Evaluaciones
+                </button>
+                <div id="sync-spinner" class="hidden text-indigo-600 font-medium">
+                    ⏳ Sincronizando…
+                </div>
+                <button id="logout-btn" class="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700">
+                    Cerrar sesión
+                </button>
+            </div>
 
             <h1 class="text-4xl font-bold mb-6">📚 Evaluaciones por Materia</h1>
             {% for subject in subjects %}
@@ -76,8 +84,8 @@
                 <div class="flex justify-between items-center">
                     <h2 class="text-2xl font-semibold text-blue-700">{{ subject.nombre }}</h2>
                     <button class="subject-toggle-btn" data-target="subject-{{ subject.pk }}">
-            <span class="chevron">&#9660;</span>
-          </button>
+                        <span class="chevron">&#9660;</span>
+                    </button>
                 </div>
                 <div id="subject-{{ subject.pk }}" class="subject-evaluations hidden">
                     {% if subject.evaluations.all %}
@@ -94,8 +102,8 @@
                                     </p>
                                 </div>
                                 <button class="toggle-btn" data-target="evaluation-{{ ev.pk }}">
-                  <span class="chevron">&#9660;</span>
-                </button>
+                                    <span class="chevron">&#9660;</span>
+                                </button>
                             </div>
                             <div class="mt-2 text-sm text-gray-700 evaluation-preview">
                                 {{ ev.contenido_html|safe|truncatechars_html:300 }}
@@ -116,50 +124,88 @@
 
     </div>
 
-    <!-- Lógica de UI: invitado vs. autenticado, bienvenida y logout -->
+    <!-- Lógica de UI: invitado vs. autenticado, bienvenida, logout y sync -->
     <script>
         document.addEventListener('DOMContentLoaded', async() => {
-            const token = localStorage.getItem('access')
-            const guestEl = document.getElementById('guest-container')
-            const dashEl = document.getElementById('dashboard-container')
-            const welcome = document.getElementById('welcome')
+            const token = localStorage.getItem('access');
+            const guestEl = document.getElementById('guest-container');
+            const dashEl = document.getElementById('dashboard-container');
+            const welcome = document.getElementById('welcome');
 
-            // Si no hay token, mostramos INVITADO y ocultamos DASHBOARD
             if (!token) {
-                guestEl.classList.remove('hidden')
-                dashEl.classList.add('hidden')
-                return
+                guestEl.classList.remove('hidden');
+                dashEl.classList.add('hidden');
+                return;
             }
 
-            // Si hay token, ocultamos INVITADO y mostramos DASHBOARD
-            guestEl.classList.add('hidden')
-            dashEl.classList.remove('hidden')
+            guestEl.classList.add('hidden');
+            dashEl.classList.remove('hidden');
 
-            // Traemos nombre completo para saludar
+            // Cargar nombre del usuario
             try {
                 const res = await fetch('/api/users/me/', {
                     headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'application/json'
+                        'Authorization': `Bearer ${token}`
                     }
-                })
+                });
                 if (res.ok) {
                     const {
                         nombre_completo
-                    } = await res.json()
-                    welcome.textContent = `Bienvenido, ${nombre_completo}`
+                    } = await res.json();
+                    welcome.textContent = `Bienvenido, ${nombre_completo}`;
                 }
             } catch (e) {
-                console.error(e)
+                console.error(e);
             }
 
-            // Logout: limpia token y redirige a login
+            // Logout
             document.getElementById('logout-btn').addEventListener('click', () => {
-                localStorage.removeItem('access')
-                localStorage.removeItem('refresh')
-                window.location.href = "{% url 'login' %}"
-            })
-        })
+                localStorage.removeItem('access');
+                localStorage.removeItem('refresh');
+                window.location.href = "{% url 'login' %}";
+            });
+
+            // Sincronización asíncrona
+            const syncBtn = document.getElementById('sync-btn');
+            const spinner = document.getElementById('sync-spinner');
+
+            syncBtn.addEventListener('click', async() => {
+                const ci = prompt('Ingresa tu CI:');
+                const password = prompt('Ingresa tu contraseña UBA:');
+                if (!ci || !password) return;
+
+                spinner.classList.remove('hidden');
+
+                await fetch('/api/users/sync/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        ci,
+                        password
+                    })
+                });
+
+                // Polling hasta completar
+                const check = setInterval(async() => {
+                    const resp = await fetch('/api/users/sync-status/', {
+                        headers: {
+                            'Authorization': `Bearer ${token}`
+                        }
+                    });
+                    const {
+                        is_synced
+                    } = await resp.json();
+                    if (is_synced) {
+                        clearInterval(check);
+                        spinner.classList.add('hidden');
+                        window.location.reload();
+                    }
+                }, 2000);
+            });
+        });
     </script>
 
     <!-- Toggles de evaluación y materia -->
@@ -167,21 +213,21 @@
         document.addEventListener('DOMContentLoaded', () => {
             document.querySelectorAll('.toggle-btn').forEach(btn => {
                 btn.addEventListener('click', () => {
-                    const target = document.getElementById(btn.dataset.target)
-                    const prev = target.parentElement.querySelector('.evaluation-preview')
-                    target.classList.toggle('hidden')
-                    if (prev) prev.classList.toggle('hidden')
-                    btn.classList.toggle('rotated')
-                })
-            })
+                    const target = document.getElementById(btn.dataset.target);
+                    const prev = target.parentElement.querySelector('.evaluation-preview');
+                    target.classList.toggle('hidden');
+                    if (prev) prev.classList.toggle('hidden');
+                    btn.classList.toggle('rotated');
+                });
+            });
             document.querySelectorAll('.subject-toggle-btn').forEach(btn => {
                 btn.addEventListener('click', () => {
                     document.getElementById(btn.dataset.target)
-                        .classList.toggle('hidden')
-                    btn.classList.toggle('rotated')
-                })
-            })
-        })
+                        .classList.toggle('hidden');
+                    btn.classList.toggle('rotated');
+                });
+            });
+        });
     </script>
 </body>
 

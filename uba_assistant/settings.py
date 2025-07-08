@@ -9,6 +9,24 @@ https://docs.djangoproject.com/en/5.2/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
+
+# ———————– PATCH django-q / Django>=4.0 ———————–
+from django.core.signing import TimestampSigner as _DjangoTS
+import django_q.core_signing
+
+class CompatTimestampSigner(_DjangoTS):
+    """
+    Extiende el TimestampSigner de Django>=4 
+    para aceptar key y salt como args posicionales,
+    tal y como django-q espera llamarlo.
+    """
+    def __init__(self, key=None, salt=None, sep=':', **kwargs):
+        super().__init__(key=key, salt=salt, sep=sep, **kwargs)
+
+# Sustituimos el signer interno de django-q por el compatible
+django_q.core_signing.TimestampSigner = CompatTimestampSigner
+# ——————————————————————————————————————————————
+
 import os
 from datetime import timedelta
 from pathlib import Path
@@ -51,7 +69,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'django-q',
+    'django_q',
     
     # Apps de terceros
     'rest_framework',
@@ -65,12 +83,15 @@ INSTALLED_APPS += ['rest_framework_simplejwt.token_blacklist']
 
 Q_CLUSTER = {
     'name': 'DjangoQCluster',
-    'workers': 4,          # número de procesos worker
-    'timeout': 60,         # tiempo máximo (s) por tarea
+    'workers': 10,          # número de procesos worker
+    'timeout': 500,         # tiempo máximo (s) por tarea
     'retry': 120,          # reintentos en caso de fallo (s)
     'queue_limit': 50,     # tamaño máximo de cola
     'bulk': 20,            # cuántas tareas coge cada worker a la vez
     'orm': 'default',      # usa la base de datos de Django como broker
+        # <<< desactiva por completo tareas programadas >>>
+    'poll': 0,
+
 }
 
 SIMPLE_JWT = {
@@ -156,6 +177,20 @@ REST_FRAMEWORK = {
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
+}
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': 'INFO',    # Cambia a 'DEBUG' si quieres ver los logger.debug()
+    },
 }
 
 # Internationalization
