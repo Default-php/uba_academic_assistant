@@ -6,19 +6,16 @@
     <meta charset="UTF-8">
     <title>Panel Académico</title>
     <link href="{% static 'css/output.css' %}" rel="stylesheet">
-    <!-- Definición de .hidden y estilos para los botones toggle -->
     <style>
         .hidden {
             display: none !important;
         }
-        /* Estilo para el botón toggle (para evaluaciones) */
         
         .toggle-btn {
             background: none;
             border: none;
             cursor: pointer;
             font-size: 1.5rem;
-            /* Tamaño adecuado */
             transition: transform 0.3s ease;
         }
         
@@ -30,7 +27,6 @@
         .toggle-btn.rotated .chevron {
             transform: rotate(180deg);
         }
-        /* Estilo para el botón de la materia */
         
         .subject-toggle-btn {
             background: none;
@@ -53,135 +49,143 @@
 
 <body class="bg-gray-50 text-gray-900">
     <div class="max-w-6xl mx-auto px-4 py-8">
-        <!-- Bienvenida -->
-        <p id="welcome" class="mb-4 text-xl">Bienvenido, …</p>
-        <button id="logout-btn" class="mb-6 bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700">
-        Cerrar sesión
-        </button>
 
-        <script>
-            document.addEventListener('DOMContentLoaded', async() => {
-                const token = localStorage.getItem('access');
-                const welcomeEl = document.getElementById('welcome');
-
-                if (!token) {
-                    welcomeEl.textContent = 'Bienvenido, invitado';
-                    return;
-                }
-
-                try {
-                    const res = await fetch('/api/users/me/', {
-                        headers: {
-                            'Authorization': `Bearer ${token}`,
-                            'Content-Type': 'application/json'
-                        }
-                    });
-
-                    if (!res.ok) {
-                        welcomeEl.textContent = 'Bienvenido, invitado';
-                        return;
-                    }
-
-                    const user = await res.json();
-                    welcomeEl.textContent = `Bienvenido, ${user.nombre_completo}`;
-                } catch (err) {
-                    console.error(err);
-                    welcomeEl.textContent = 'Bienvenido, invitado';
-                }
-            });
-        </script>
-        <script>
-            document.getElementById('logout-btn').addEventListener('click', () => {
-                // Eliminamos tokens de JWT
-                localStorage.removeItem('access');
-                localStorage.removeItem('refresh');
-                // Redirigimos a la página de login
-                window.location.href = "{% url 'login' %}";
-            });
-        </script>
-        <h1 class="text-4xl font-bold mb-6">📚 Evaluaciones por Materia</h1>
-        {% for subject in subjects %}
-        <div class="mb-8 bg-white shadow-lg rounded-lg p-6">
-            <div class="flex justify-between items-center">
-                <h2 class="text-2xl font-semibold text-blue-700">{{ subject.nombre }}</h2>
-                <!-- Botón de toggle para mostrar/ocultar las evaluaciones de la materia -->
-                <button class="subject-toggle-btn" data-target="subject-{{ subject.pk }}">
-                    <span class="chevron">&#9660;</span>
-                </button>
+        <!-- BLOQUE INVITADO -->
+        <div id="guest-container" class="text-center space-y-4">
+            <h2 class="text-3xl font-bold">Bienvenido al Asistente Académico UBA</h2>
+            <p class="text-lg text-gray-700">
+                Para ver tus evaluaciones sincronizadas, debes iniciar sesión.
+            </p>
+            <div class="space-x-4">
+                <a href="{% url 'login' %}" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+          Iniciar Sesión
+        </a>
+                <a href="{% url 'register' %}" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">
+          Crear Cuenta
+        </a>
             </div>
-            <!-- Lista de evaluaciones oculta inicialmente -->
-            <div id="subject-{{ subject.pk }}" class="subject-evaluations hidden">
-                {% if subject.evaluations.all %}
-                <ul class="space-y-4">
-                    {% for evaluation in subject.evaluations.all %}
-                    <li class="border rounded p-4 hover:bg-gray-50 transition">
-                        <div class="flex justify-between items-center">
-                            <div>
-                                <h3 class="text-lg font-bold">{{ evaluation.titulo }}</h3>
-                                <p class="text-sm text-gray-600">
-                                    <strong>Tipo:</strong> {{ evaluation.tipo }} &nbsp;|
-                                    <strong>Unidad:</strong> {{ evaluation.unidad }} &nbsp;|
-                                    <strong>Fecha:</strong> {{ evaluation.fecha_inicio|date:"d/m/Y" }} - {{ evaluation.fecha_cierre|date:"d/m/Y" }}
-                                </p>
-                            </div>
-                            <!-- Botón toggle para la evaluación -->
-                            <button class="toggle-btn" data-target="evaluation-{{ evaluation.pk }}">
-                                <span class="chevron">&#9660;</span>
-                            </button>
-                        </div>
-                        <!-- Vista previa truncada -->
-                        <div class="mt-2 text-sm text-gray-700 evaluation-preview">
-                            {{ evaluation.contenido_html|safe|truncatechars_html:300 }}
-                        </div>
-                        <!-- Contenido completo, oculto inicialmente -->
-                        <div id="evaluation-{{ evaluation.pk }}" class="mt-2 text-sm text-gray-700 evaluation-full hidden">
-                            {{ evaluation.contenido_html|safe }}
-                        </div>
-                    </li>
-                    {% endfor %}
-                </ul>
-                {% else %}
-                <p class="text-gray-500">No hay evaluaciones registradas.</p>
-                {% endif %}
-            </div>
+            <p class="text-sm text-gray-500">Con una cuenta podrás:</p>
+            <ul class="list-disc list-inside text-gray-600">
+                <li>Ver todas tus materias y evaluaciones</li>
+                <li>Recibir notificaciones antes de las fechas límite</li>
+                <li>Acceder desde cualquier dispositivo</li>
+            </ul>
         </div>
-        {% endfor %}
+
+        <!-- BLOQUE DASHBOARD (autenticado) -->
+        <div id="dashboard-container" class="hidden">
+            <p id="welcome" class="mb-4 text-xl">Bienvenido, …</p>
+            <button id="logout-btn" class="mb-6 bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700">
+        Cerrar sesión
+      </button>
+
+            <h1 class="text-4xl font-bold mb-6">📚 Evaluaciones por Materia</h1>
+            {% for subject in subjects %}
+            <div class="mb-8 bg-white shadow-lg rounded-lg p-6">
+                <div class="flex justify-between items-center">
+                    <h2 class="text-2xl font-semibold text-blue-700">{{ subject.nombre }}</h2>
+                    <button class="subject-toggle-btn" data-target="subject-{{ subject.pk }}">
+            <span class="chevron">&#9660;</span>
+          </button>
+                </div>
+                <div id="subject-{{ subject.pk }}" class="subject-evaluations hidden">
+                    {% if subject.evaluations.all %}
+                    <ul class="space-y-4">
+                        {% for evaluation in subject.evaluations.all %}
+                        <li class="border rounded p-4 hover:bg-gray-50 transition">
+                            <div class="flex justify-between items-center">
+                                <div>
+                                    <h3 class="text-lg font-bold">{{ evaluation.titulo }}</h3>
+                                    <p class="text-sm text-gray-600">
+                                        <strong>Tipo:</strong> {{ evaluation.tipo }} |
+                                        <strong>Unidad:</strong> {{ evaluation.unidad }} |
+                                        <strong>Fecha:</strong> {{ evaluation.fecha_inicio|date:"d/m/Y" }} - {{ evaluation.fecha_cierre|date:"d/m/Y" }}
+                                    </p>
+                                </div>
+                                <button class="toggle-btn" data-target="evaluation-{{ evaluation.pk }}">
+                  <span class="chevron">&#9660;</span>
+                </button>
+                            </div>
+                            <div class="mt-2 text-sm text-gray-700 evaluation-preview">
+                                {{ evaluation.contenido_html|safe|truncatechars_html:300 }}
+                            </div>
+                            <div id="evaluation-{{ evaluation.pk }}" class="mt-2 text-sm text-gray-700 evaluation-full hidden">
+                                {{ evaluation.contenido_html|safe }}
+                            </div>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    {% else %}
+                    <p class="text-gray-500">No hay evaluaciones registradas.</p>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
     </div>
 
-    <!-- Script para manejar la alternancia (toggle) -->
+    <!-- Script de control de vista, bienvenida y logout -->
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // Toggle para evaluaciones individuales
-            document.querySelectorAll('.toggle-btn').forEach(function(button) {
-                button.addEventListener('click', function() {
-                    var targetId = button.getAttribute('data-target');
-                    var fullContent = document.getElementById(targetId);
-                    var previewContent = fullContent.parentElement.querySelector('.evaluation-preview');
+        document.addEventListener('DOMContentLoaded', async() => {
+            const token = localStorage.getItem('access');
+            const guestEl = document.getElementById('guest-container');
+            const dashEl = document.getElementById('dashboard-container');
+            const welcomeEl = document.getElementById('welcome');
 
-                    if (fullContent.classList.contains('hidden')) {
-                        fullContent.classList.remove('hidden');
-                        if (previewContent) previewContent.classList.add('hidden');
-                        button.classList.add('rotated');
-                    } else {
-                        fullContent.classList.add('hidden');
-                        if (previewContent) previewContent.classList.remove('hidden');
-                        button.classList.remove('rotated');
+            if (!token) {
+                guestEl.classList.remove('hidden');
+                dashEl.classList.add('hidden');
+                return;
+            }
+
+            guestEl.classList.add('hidden');
+            dashEl.classList.remove('hidden');
+
+            // Obtener datos del usuario autenticado
+            try {
+                const res = await fetch('/api/users/me/', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
                     }
                 });
-            });
+                if (res.ok) {
+                    const {
+                        nombre_completo
+                    } = await res.json();
+                    welcomeEl.textContent = `Bienvenido, ${nombre_completo}`;
+                }
+            } catch (err) {
+                console.error(err);
+            }
 
-            // Toggle para la materia: mostrar/ocultar evaluaciones
-            document.querySelectorAll('.subject-toggle-btn').forEach(function(button) {
-                button.addEventListener('click', function() {
-                    var targetId = button.getAttribute('data-target');
-                    var subjectContent = document.getElementById(targetId);
-                    if (subjectContent.classList.contains('hidden')) {
-                        subjectContent.classList.remove('hidden');
-                        button.classList.add('rotated');
-                    } else {
-                        subjectContent.classList.add('hidden');
-                        button.classList.remove('rotated');
-                    }
+            // Logout
+            document.getElementById('logout-btn').addEventListener('click', () => {
+                localStorage.removeItem('access');
+                localStorage.removeItem('refresh');
+                window.location.href = "{% url 'login' %}";
+            });
+        });
+    </script>
+
+    <!-- Script para toggles de evaluaciones y materias -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            document.querySelectorAll('.toggle-btn').forEach(button => {
+                button.addEventListener('click', () => {
+                    const full = document.getElementById(button.dataset.target);
+                    const prev = full.parentElement.querySelector('.evaluation-preview');
+                    full.classList.toggle('hidden');
+                    if (prev) prev.classList.toggle('hidden');
+                    button.classList.toggle('rotated');
+                });
+            });
+            document.querySelectorAll('.subject-toggle-btn').forEach(button => {
+                button.addEventListener('click', () => {
+                    const subj = document.getElementById(button.dataset.target);
+                    subj.classList.toggle('hidden');
+                    button.classList.toggle('rotated');
                 });
             });
         });
