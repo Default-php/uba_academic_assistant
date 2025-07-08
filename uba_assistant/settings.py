@@ -60,6 +60,12 @@ INSTALLED_APPS = [
     # Tu aplicación (ajusta el nombre si no usaste 'core')
     'core',
 ]
+INSTALLED_APPS += ['rest_framework_simplejwt.token_blacklist']
+
+SIMPLE_JWT = {
+  'BLACKLIST_AFTER_ROTATION': True,
+  # demás ajustes…
+}
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',

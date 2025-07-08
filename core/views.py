@@ -5,6 +5,8 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.parsers import JSONParser  
 from rest_framework.generics import CreateAPIView
+from rest_framework.decorators import action
+from rest_framework.permissions import IsAuthenticated
 from django.db.models import Prefetch
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
@@ -73,6 +75,13 @@ class RegisterView(CreateAPIView):
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserSerializer
+    
+    @action(detail=False, methods=['get'], permission_classes=[IsAuthenticated])
+    def me(self, request):
+        # Devuelve los datos del usuario logueado
+        serializer = self.get_serializer(request.user)
+        return Response(serializer.data)
+
 
 class SubjectViewSet(viewsets.ModelViewSet):
     queryset = Subject.objects.prefetch_related(

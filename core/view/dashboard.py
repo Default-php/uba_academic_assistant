@@ -2,7 +2,6 @@ from django.shortcuts import render
 from core.models import Subject, Evaluation
 from django.db.models import Prefetch
 
-
 def dashboard_view(request):
     subjects = Subject.objects.prefetch_related(
         Prefetch(

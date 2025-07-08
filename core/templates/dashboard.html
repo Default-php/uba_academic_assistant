@@ -53,6 +53,52 @@
 
 <body class="bg-gray-50 text-gray-900">
     <div class="max-w-6xl mx-auto px-4 py-8">
+        <!-- Bienvenida -->
+        <p id="welcome" class="mb-4 text-xl">Bienvenido, …</p>
+        <button id="logout-btn" class="mb-6 bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700">
+        Cerrar sesión
+        </button>
+
+        <script>
+            document.addEventListener('DOMContentLoaded', async() => {
+                const token = localStorage.getItem('access');
+                const welcomeEl = document.getElementById('welcome');
+
+                if (!token) {
+                    welcomeEl.textContent = 'Bienvenido, invitado';
+                    return;
+                }
+
+                try {
+                    const res = await fetch('/api/users/me/', {
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Content-Type': 'application/json'
+                        }
+                    });
+
+                    if (!res.ok) {
+                        welcomeEl.textContent = 'Bienvenido, invitado';
+                        return;
+                    }
+
+                    const user = await res.json();
+                    welcomeEl.textContent = `Bienvenido, ${user.nombre_completo}`;
+                } catch (err) {
+                    console.error(err);
+                    welcomeEl.textContent = 'Bienvenido, invitado';
+                }
+            });
+        </script>
+        <script>
+            document.getElementById('logout-btn').addEventListener('click', () => {
+                // Eliminamos tokens de JWT
+                localStorage.removeItem('access');
+                localStorage.removeItem('refresh');
+                // Redirigimos a la página de login
+                window.location.href = "{% url 'login' %}";
+            });
+        </script>
         <h1 class="text-4xl font-bold mb-6">📚 Evaluaciones por Materia</h1>
         {% for subject in subjects %}
         <div class="mb-8 bg-white shadow-lg rounded-lg p-6">
