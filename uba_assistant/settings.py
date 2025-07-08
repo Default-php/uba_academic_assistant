@@ -83,11 +83,11 @@ INSTALLED_APPS += ['rest_framework_simplejwt.token_blacklist']
 
 Q_CLUSTER = {
     'name': 'DjangoQCluster',
-    'workers': 10,          # número de procesos worker
+    'workers': 5,          # número de procesos worker
     'timeout': 500,         # tiempo máximo (s) por tarea
-    'retry': 120,          # reintentos en caso de fallo (s)
+    'retry': 1000,          # reintentos en caso de fallo (s)
     'queue_limit': 50,     # tamaño máximo de cola
-    'bulk': 20,            # cuántas tareas coge cada worker a la vez
+    'bulk': 15,            # cuántas tareas coge cada worker a la vez
     'orm': 'default',      # usa la base de datos de Django como broker
         # <<< desactiva por completo tareas programadas >>>
     'poll': 0,
@@ -139,8 +139,9 @@ DATABASES = {
         'NAME': 'uba_assistant_db',
         'USER': 'root',
         'PASSWORD': '',  # contraseña de XAMPP
-        'HOST': 'localhost',
+        'HOST': '127.0.0.1',
         'PORT': '3306',
+        'CONN_MAX_AGE': 60, 
     }
 }
 

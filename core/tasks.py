@@ -13,31 +13,35 @@ logger = logging.getLogger(__name__)
 User = get_user_model()
 
 def sync_for_user(user_id: int, ci: str, password: str):
-    logger.info(f"🔄 [SYNC START] Usuario {user_id}, CI={ci}")
-
+    # 1) Obtener usuario o abortar
     try:
         user = User.objects.get(pk=user_id)
+    except User.DoesNotExist:
+        logger.error(f"❌ [SYNC ERROR] Usuario {user_id} no existe.")
+        return
 
-        # 1) Materias
+    # 2) Guard: si ya está sincronizado, cortamos
+    if user.is_synced:
+        logger.info(f"⏭️ [SYNC SKIP] Usuario {user_id} ya sincronizado.")
+        return
+
+    logger.info(f"🔄 [SYNC START] Usuario {user_id}, CI={ci}")
+    try:
+        # 3) Scrape Materias
         logger.info("   → Scrapeando materias…")
         subjects_data = scrape_subjects(ci, password)
         logger.info(f"   → Encontradas {len(subjects_data)} materias")
-
         for m in subjects_data:
             subj, created = Subject.objects.get_or_create(
                 codigo=m["codigo"],
-                defaults={
-                    "nombre":    m["nombre"],
-                    "trimestre": m["trimestre"]
-                }
+                defaults={"nombre": m["nombre"], "trimestre": m["trimestre"]}
             )
             logger.debug(f"      {'Creada' if created else 'Ya existe'}: {m['nombre']}")
 
-        # 2) Profesores
+        # 4) Scrape Profesores
         logger.info("   → Scrapeando profesores…")
         profs_data = scrape_professors(ci, password)
         logger.info(f"   → Profesores procesados: {len(profs_data)}")
-
         for entry in profs_data:
             try:
                 subj = Subject.objects.get(codigo=entry["codigo"])
@@ -49,21 +53,19 @@ def sync_for_user(user_id: int, ci: str, password: str):
             except Subject.DoesNotExist:
                 logger.warning(f"      Materia no encontrada: {entry['codigo']}")
 
-        # 3) Evaluaciones
+        # 5) Limpiar Evaluaciones Previas
         logger.info("   → Limpiando evaluaciones previas del usuario…")
         Evaluation.objects.filter(user=user).delete()
 
+        # 6) Scrape Evaluaciones
         logger.info("   → Scrapeando evaluaciones…")
         evals_data = scrape_evaluations()
         logger.info(f"   → Encontradas {len(evals_data)} evaluaciones")
-
         for ev in evals_data:
             try:
                 subj = Subject.objects.get(codigo=ev["subject_codigo"])
             except Subject.DoesNotExist:
-                logger.warning(
-                    f"      Evaluación para materia desconocida: {ev['subject_codigo']}"
-                )
+                logger.warning(f"      Evaluación para materia desconocida: {ev['subject_codigo']}")
                 continue
 
             obj, created = Evaluation.objects.update_or_create(
@@ -85,13 +87,11 @@ def sync_for_user(user_id: int, ci: str, password: str):
             )
             logger.debug(f"      {'Creada' if created else 'Actualizada'}: {ev.get('titulo')}")
 
-        # 4) Marca sincronizado
-        user.is_synced = True
+        # 7) Marcar sincronización completa
+        user.is_synced   = True
         user.last_synced = timezone.now()
-        user.save()
-
+        user.save(update_fields=['is_synced', 'last_synced'])
         logger.info(f"✅ [SYNC END] Usuario {user_id} sincronizado con éxito.")
 
     except Exception as e:
-        # Captura errores y evita reintentos
         logger.error(f"❌ [SYNC ERROR] Usuario {user_id}: {e}", exc_info=True)
