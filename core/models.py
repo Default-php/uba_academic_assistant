@@ -29,15 +29,27 @@ class User(AbstractBaseUser, PermissionsMixin):
     trimestre = models.PositiveSmallIntegerField(
         validators=[MinValueValidator(1), MaxValueValidator(12)],
         null=True,
-        blank=True)
+        blank=True
+    )
     fecha_registro = models.DateTimeField(auto_now_add=True)
 
     is_active = models.BooleanField(default=True)
-    is_staff = models.BooleanField(default=False)
+    is_staff  = models.BooleanField(default=False)
+
+    # ─── Campos para sincronización de evaluaciones ───
+    is_synced   = models.BooleanField(
+        default=False,
+        help_text="True si ya ejecutó el scraping de evaluaciones"
+    )
+    last_synced = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="Fecha/hora de la última sincronización"
+    )
 
     objects = CustomUserManager()
 
-    USERNAME_FIELD = 'ci'  # Campo para login
+    USERNAME_FIELD  = 'ci'
     REQUIRED_FIELDS = ['nombre_completo', 'correo']
 
     def __str__(self):
