@@ -11,37 +11,28 @@
             display: none !important;
         }
         
-        .toggle-btn {
-            background: none;
-            border: none;
-            cursor: pointer;
-            font-size: 1.5rem;
-            transition: transform 0.3s ease;
-        }
-        
-        .toggle-btn .chevron {
-            display: inline-block;
-            transition: transform 0.3s ease;
-        }
-        
-        .toggle-btn.rotated .chevron {
-            transform: rotate(180deg);
-        }
-        
+        .toggle-btn,
         .subject-toggle-btn {
             background: none;
             border: none;
             cursor: pointer;
-            font-size: 1.75rem;
             transition: transform 0.3s ease;
         }
         
-        .subject-toggle-btn .chevron {
+        .toggle-btn {
+            font-size: 1.5rem;
+        }
+        
+        .subject-toggle-btn {
+            font-size: 1.75rem;
+        }
+        
+        .chevron {
             display: inline-block;
             transition: transform 0.3s ease;
         }
         
-        .subject-toggle-btn.rotated .chevron {
+        .rotated .chevron {
             transform: rotate(180deg);
         }
     </style>
@@ -91,26 +82,26 @@
                 <div id="subject-{{ subject.pk }}" class="subject-evaluations hidden">
                     {% if subject.evaluations.all %}
                     <ul class="space-y-4">
-                        {% for evaluation in subject.evaluations.all %}
+                        {% for ev in subject.evaluations.all %}
                         <li class="border rounded p-4 hover:bg-gray-50 transition">
                             <div class="flex justify-between items-center">
                                 <div>
-                                    <h3 class="text-lg font-bold">{{ evaluation.titulo }}</h3>
+                                    <h3 class="text-lg font-bold">{{ ev.titulo }}</h3>
                                     <p class="text-sm text-gray-600">
-                                        <strong>Tipo:</strong> {{ evaluation.tipo }} |
-                                        <strong>Unidad:</strong> {{ evaluation.unidad }} |
-                                        <strong>Fecha:</strong> {{ evaluation.fecha_inicio|date:"d/m/Y" }} - {{ evaluation.fecha_cierre|date:"d/m/Y" }}
+                                        <strong>Tipo:</strong> {{ ev.tipo }} |
+                                        <strong>Unidad:</strong> {{ ev.unidad }} |
+                                        <strong>Fecha:</strong> {{ ev.fecha_inicio|date:"d/m/Y" }} - {{ ev.fecha_cierre|date:"d/m/Y" }}
                                     </p>
                                 </div>
-                                <button class="toggle-btn" data-target="evaluation-{{ evaluation.pk }}">
+                                <button class="toggle-btn" data-target="evaluation-{{ ev.pk }}">
                   <span class="chevron">&#9660;</span>
                 </button>
                             </div>
                             <div class="mt-2 text-sm text-gray-700 evaluation-preview">
-                                {{ evaluation.contenido_html|safe|truncatechars_html:300 }}
+                                {{ ev.contenido_html|safe|truncatechars_html:300 }}
                             </div>
-                            <div id="evaluation-{{ evaluation.pk }}" class="mt-2 text-sm text-gray-700 evaluation-full hidden">
-                                {{ evaluation.contenido_html|safe }}
+                            <div id="evaluation-{{ ev.pk }}" class="mt-2 text-sm text-gray-700 evaluation-full hidden">
+                                {{ ev.contenido_html|safe }}
                             </div>
                         </li>
                         {% endfor %}
@@ -125,70 +116,72 @@
 
     </div>
 
-    <!-- Script de control de vista, bienvenida y logout -->
+    <!-- Lógica de UI: invitado vs. autenticado, bienvenida y logout -->
     <script>
         document.addEventListener('DOMContentLoaded', async() => {
-            const token = localStorage.getItem('access');
-            const guestEl = document.getElementById('guest-container');
-            const dashEl = document.getElementById('dashboard-container');
-            const welcomeEl = document.getElementById('welcome');
+            const token = localStorage.getItem('access')
+            const guestEl = document.getElementById('guest-container')
+            const dashEl = document.getElementById('dashboard-container')
+            const welcome = document.getElementById('welcome')
 
+            // Si no hay token, mostramos INVITADO y ocultamos DASHBOARD
             if (!token) {
-                guestEl.classList.remove('hidden');
-                dashEl.classList.add('hidden');
-                return;
+                guestEl.classList.remove('hidden')
+                dashEl.classList.add('hidden')
+                return
             }
 
-            guestEl.classList.add('hidden');
-            dashEl.classList.remove('hidden');
+            // Si hay token, ocultamos INVITADO y mostramos DASHBOARD
+            guestEl.classList.add('hidden')
+            dashEl.classList.remove('hidden')
 
-            // Obtener datos del usuario autenticado
+            // Traemos nombre completo para saludar
             try {
                 const res = await fetch('/api/users/me/', {
                     headers: {
                         'Authorization': `Bearer ${token}`,
                         'Content-Type': 'application/json'
                     }
-                });
+                })
                 if (res.ok) {
                     const {
                         nombre_completo
-                    } = await res.json();
-                    welcomeEl.textContent = `Bienvenido, ${nombre_completo}`;
+                    } = await res.json()
+                    welcome.textContent = `Bienvenido, ${nombre_completo}`
                 }
-            } catch (err) {
-                console.error(err);
+            } catch (e) {
+                console.error(e)
             }
 
-            // Logout
+            // Logout: limpia token y redirige a login
             document.getElementById('logout-btn').addEventListener('click', () => {
-                localStorage.removeItem('access');
-                localStorage.removeItem('refresh');
-                window.location.href = "{% url 'login' %}";
-            });
-        });
+                localStorage.removeItem('access')
+                localStorage.removeItem('refresh')
+                window.location.href = "{% url 'login' %}"
+            })
+        })
     </script>
 
-    <!-- Script para toggles de evaluaciones y materias -->
+    <!-- Toggles de evaluación y materia -->
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            document.querySelectorAll('.toggle-btn').forEach(button => {
-                button.addEventListener('click', () => {
-                    const full = document.getElementById(button.dataset.target);
-                    const prev = full.parentElement.querySelector('.evaluation-preview');
-                    full.classList.toggle('hidden');
-                    if (prev) prev.classList.toggle('hidden');
-                    button.classList.toggle('rotated');
-                });
-            });
-            document.querySelectorAll('.subject-toggle-btn').forEach(button => {
-                button.addEventListener('click', () => {
-                    const subj = document.getElementById(button.dataset.target);
-                    subj.classList.toggle('hidden');
-                    button.classList.toggle('rotated');
-                });
-            });
-        });
+        document.addEventListener('DOMContentLoaded', () => {
+            document.querySelectorAll('.toggle-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const target = document.getElementById(btn.dataset.target)
+                    const prev = target.parentElement.querySelector('.evaluation-preview')
+                    target.classList.toggle('hidden')
+                    if (prev) prev.classList.toggle('hidden')
+                    btn.classList.toggle('rotated')
+                })
+            })
+            document.querySelectorAll('.subject-toggle-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.getElementById(btn.dataset.target)
+                        .classList.toggle('hidden')
+                    btn.classList.toggle('rotated')
+                })
+            })
+        })
     </script>
 </body>
 
