@@ -13,6 +13,8 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 # ———————– PATCH django-q / Django>=4.0 ———————–
 from django.core.signing import TimestampSigner as _DjangoTS
 import django_q.core_signing
+import os
+import openai
 
 class CompatTimestampSigner(_DjangoTS):
     """
@@ -216,3 +218,9 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 CORS_ALLOW_ALL_ORIGINS = True
 
 AUTH_USER_MODEL = 'core.User'
+
+# Clave de OpenAI desde .env
+openai.api_key = os.getenv('OPENAI_API_KEY')
+
+# Modelo por defecto
+OPENAI_DEFAULT_MODEL = 'gpt-4'
