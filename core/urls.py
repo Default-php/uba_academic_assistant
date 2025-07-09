@@ -2,6 +2,7 @@ from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from .auth_views import RegisterView, LogoutView
 from core.view.dashboard import dashboard_view, register_view, login_view
+from core.view.assistant import AssistantAPIView
 from rest_framework_simplejwt.views import (
     TokenObtainPairView,
     TokenRefreshView,
@@ -38,5 +39,6 @@ urlpatterns = [
     path('register/', RegisterView.as_view(), name='user-register'),
     path('login/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('refresh/', TokenRefreshView.as_view(), name='token_refresh'),
-    path('logout/', LogoutView.as_view(), name='token_logout')
+    path('logout/', LogoutView.as_view(), name='token_logout'),
+    path('api/chat/', AssistantAPIView.as_view(), name='api_chat')
 ]

@@ -92,7 +92,7 @@ class Inscription(models.Model):
 
 
 class Evaluation(models.Model):
-    # QUE LIGA CADA EVALUACIÓN A UN USUARIO
+    # LIGA CADA EVALUACIÓN A UN USUARIO
     user       = models.ForeignKey(
                    settings.AUTH_USER_MODEL,
                    on_delete=models.CASCADE,
