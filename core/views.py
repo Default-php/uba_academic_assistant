@@ -1,3 +1,7 @@
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.views.generic import TemplateView
+from django.shortcuts import get_object_or_404
+from django.utils.html import strip_tags
 from django_q.tasks import async_task
 from django.http import JsonResponse
 from rest_framework import viewsets
@@ -31,6 +35,17 @@ def api_root(request):
         "api": "/api/"
     })
 
+class EvaluationChatView(LoginRequiredMixin, TemplateView):
+    template_name = 'evaluation_chat.html'
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ev = get_object_or_404(Evaluation, pk=kwargs['eval_id'], user=self.request.user)
+        # extrae texto plano de ev.contenido_html
+        ctx['plain_text'] = strip_tags(ev.contenido_html)
+        ctx['eval'] = ev
+        return ctx
+    
 class RegisterView(CreateAPIView):
     serializer_class = RegisterSerializer
     parser_classes = [JSONParser]

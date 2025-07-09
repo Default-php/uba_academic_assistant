@@ -29,9 +29,13 @@ class CompatTimestampSigner(_DjangoTS):
 django_q.core_signing.TimestampSigner = CompatTimestampSigner
 # ——————————————————————————————————————————————
 
-import os
 from datetime import timedelta
 from pathlib import Path
+from dotenv import load_dotenv
+
+# Cargamos el .env desde python-dotenv
+env_path = Path(__file__).resolve().parent.parent / '.env'
+load_dotenv(env_path)
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -220,7 +224,10 @@ CORS_ALLOW_ALL_ORIGINS = True
 AUTH_USER_MODEL = 'core.User'
 
 # Clave de OpenAI desde .env
-openai.api_key = os.getenv('OPENAI_API_KEY')
+OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
 
 # Modelo por defecto
-OPENAI_DEFAULT_MODEL = 'gpt-4'
+OPENAI_DEFAULT_MODEL = 'gpt-3.5-turbo'
+
+# Tokens máximos de respuesta
+OPENAI_MAX_TOKENS = 1200

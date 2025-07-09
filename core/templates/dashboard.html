@@ -106,16 +106,24 @@
                                         <strong>Fecha:</strong> {{ ev.fecha_inicio|date:"d/m/Y" }} – {{ ev.fecha_cierre|date:"d/m/Y" }}
                                     </p>
                                 </div>
+                                <!-- NUEVO: botón Chat -->
+                                <button class="chat-btn bg-green-600 text-white px-2 py-1 rounded hover:bg-green-700 mr-2" data-eval-id="{{ ev.pk }}">
+                                    💬 Chat
+                                </button>
+                                <!-- toggle original -->
                                 <button class="toggle-btn" data-target="evaluation-{{ ev.pk }}">
-                    <span class="chevron">&#9660;</span>
-                  </button>
+                                    <span class="chevron">&#9660;</span>
+                                </button>
                             </div>
+
                             <div class="mt-2 text-sm text-gray-700 evaluation-preview">
                                 {{ ev.contenido_html|safe|truncatechars_html:300 }}
                             </div>
                             <div id="evaluation-{{ ev.pk }}" class="mt-2 text-sm text-gray-700 evaluation-full hidden">
                                 {{ ev.contenido_html|safe }}
                             </div>
+                            <!-- TEXTO PLANO OCULTO PARA EL CHAT -->
+                            <div id="plain-text-{{ ev.pk }}" class="hidden">{{ ev.contenido_html|striptags }}</div>
                         </li>
                         {% endfor %}
                     </ul>
@@ -128,102 +136,247 @@
             <p class="text-gray-500">Aún no has sincronizado ninguna evaluación.</p>
             {% endfor %}
 
-        </div>
-        {% endif %}
+            <!-- ——— Panel de chat al final del dashboard ——— -->
+            <div id="chat-panel" class="hidden 
+         w-full 
+         bg-white shadow-inner 
+         flex flex-col 
+         mt-8 mb-8 
+         rounded-lg border border-gray-200 
+         overflow-hidden 
+         max-h-[70vh]">
+                <!-- Cabecera -->
+                <div class="flex-none flex items-center justify-between 
+           bg-indigo-600 text-white 
+           px-4 py-2 rounded-t-lg">
+                    <h3 class="font-semibold">Asistente UBA</h3>
+                    <button id="chat-close" class="text-xl leading-none">&times;</button>
+                </div>
 
-        <!-- Toggles de evaluación y materia -->
-        <script>
-            document.addEventListener('DOMContentLoaded', () => {
-                document.querySelectorAll('.toggle-btn').forEach(btn => {
-                    btn.addEventListener('click', () => {
-                        const target = document.getElementById(btn.dataset.target);
-                        const prev = target.parentElement.querySelector('.evaluation-preview');
-                        target.classList.toggle('hidden');
-                        if (prev) prev.classList.toggle('hidden');
-                        btn.classList.toggle('rotated');
+                <!-- Mensajes (ocupa todo el hueco sobrante y hace scroll) -->
+                <div id="chat-panel-messages" class="flex-1 overflow-y-auto px-4 py-2 space-y-2 text-sm bg-gray-50"></div>
+
+                <!-- Formulario de envío (siempre visible) -->
+                <form id="chat-panel-form" class="flex-none flex items-center border-t 
+           px-4 py-2 bg-white">
+                    <input id="chat-panel-input" type="text" placeholder="Escribe tu pregunta…" class="flex-grow px-3 py-2 mr-2 
+             focus:outline-none rounded-md 
+             border border-gray-300" autocomplete="off" />
+                    <button type="submit" class="bg-indigo-600 text-white px-4 py-2 rounded-md">
+      Enviar
+    </button>
+                </form>
+            </div>
+
+            {% endif %}
+
+            <!-- Toggles de evaluación y materia -->
+            <script>
+                document.addEventListener('DOMContentLoaded', () => {
+                    document.querySelectorAll('.toggle-btn').forEach(btn => {
+                        btn.addEventListener('click', () => {
+                            const target = document.getElementById(btn.dataset.target);
+                            const prev = target.parentElement.querySelector('.evaluation-preview');
+                            target.classList.toggle('hidden');
+                            if (prev) prev.classList.toggle('hidden');
+                            btn.classList.toggle('rotated');
+                        });
+                    });
+                    document.querySelectorAll('.subject-toggle-btn').forEach(btn => {
+                        btn.addEventListener('click', () => {
+                            document.getElementById(btn.dataset.target)
+                                .classList.toggle('hidden');
+                            btn.classList.toggle('rotated');
+                        });
                     });
                 });
-                document.querySelectorAll('.subject-toggle-btn').forEach(btn => {
-                    btn.addEventListener('click', () => {
-                        document.getElementById(btn.dataset.target)
-                            .classList.toggle('hidden');
-                        btn.classList.toggle('rotated');
-                    });
-                });
-            });
-        </script>
+            </script>
 
-        <script>
-            // Helper para leer la cookie CSRF
-            function getCookie(name) {
-                let cookieValue = null;
-                if (document.cookie && document.cookie !== '') {
-                    for (let cookie of document.cookie.split(';')) {
-                        cookie = cookie.trim();
-                        if (cookie.startsWith(name + '=')) {
-                            cookieValue = decodeURIComponent(cookie.slice(name.length + 1));
-                            break;
+            <script>
+                // Helper para leer la cookie CSRF
+                function getCookie(name) {
+                    let cookieValue = null;
+                    if (document.cookie && document.cookie !== '') {
+                        for (let cookie of document.cookie.split(';')) {
+                            cookie = cookie.trim();
+                            if (cookie.startsWith(name + '=')) {
+                                cookieValue = decodeURIComponent(cookie.slice(name.length + 1));
+                                break;
+                            }
                         }
                     }
-                }
-                return cookieValue;
-            }
-
-            document.addEventListener('DOMContentLoaded', () => {
-                const syncBtn = document.getElementById('sync-btn');
-                const spinner = document.getElementById('sync-spinner');
-                if (!syncBtn || !spinner) {
-                    console.error('No encuentro sync-btn o sync-spinner en el DOM');
-                    return;
+                    return cookieValue;
                 }
 
-                syncBtn.addEventListener('click', async() => {
-                    console.log('👉 Click en Sincronizar'); // <-- debug
-                    const ci = prompt('Ingresa tu CI:');
-                    const password = prompt('Ingresa tu contraseña UBA:');
-                    if (!ci || !password) return;
-
-                    spinner.classList.remove('hidden');
-
-                    try {
-                        const res = await fetch('/api/users/sync/', {
-                            method: 'POST',
-                            credentials: 'same-origin',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'X-CSRFToken': getCookie('csrftoken')
-                            },
-                            body: JSON.stringify({
-                                ci,
-                                password
-                            })
-                        });
-                        console.log('sync POST status:', res.status);
-
-                        // Polling del estado
-                        const check = setInterval(async() => {
-                            const resp = await fetch('/api/users/sync-status/', {
-                                credentials: 'same-origin'
-                            });
-                            const {
-                                is_synced
-                            } = await resp.json();
-                            console.log('is_synced?', is_synced);
-                            if (is_synced) {
-                                clearInterval(check);
-                                spinner.classList.add('hidden');
-                                window.location.reload();
-                            }
-                        }, 2000);
-
-                    } catch (err) {
-                        console.error('Error en sync:', err);
-                        spinner.classList.add('hidden');
+                document.addEventListener('DOMContentLoaded', () => {
+                    const syncBtn = document.getElementById('sync-btn');
+                    const spinner = document.getElementById('sync-spinner');
+                    if (!syncBtn || !spinner) {
+                        console.error('No encuentro sync-btn o sync-spinner en el DOM');
+                        return;
                     }
-                });
-            });
-        </script>
 
+                    syncBtn.addEventListener('click', async() => {
+                        console.log('👉 Click en Sincronizar'); // <-- debug
+                        const ci = prompt('Ingresa tu CI:');
+                        const password = prompt('Ingresa tu contraseña UBA:');
+                        if (!ci || !password) return;
+
+                        spinner.classList.remove('hidden');
+
+                        try {
+                            const res = await fetch('/api/users/sync/', {
+                                method: 'POST',
+                                credentials: 'same-origin',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'X-CSRFToken': getCookie('csrftoken')
+                                },
+                                body: JSON.stringify({
+                                    ci,
+                                    password
+                                })
+                            });
+                            console.log('sync POST status:', res.status);
+
+                            // Polling del estado
+                            const check = setInterval(async() => {
+                                const resp = await fetch('/api/users/sync-status/', {
+                                    credentials: 'same-origin'
+                                });
+                                const {
+                                    is_synced
+                                } = await resp.json();
+                                console.log('is_synced?', is_synced);
+                                if (is_synced) {
+                                    clearInterval(check);
+                                    spinner.classList.add('hidden');
+                                    window.location.reload();
+                                }
+                            }, 2000);
+
+                        } catch (err) {
+                            console.error('Error en sync:', err);
+                            spinner.classList.add('hidden');
+                        }
+                    });
+                });
+            </script>
+
+            <script>
+                document.addEventListener('DOMContentLoaded', () => {
+                    const panel = document.getElementById('chat-panel');
+                    const closeBtn = document.getElementById('chat-close');
+                    const form = document.getElementById('chat-panel-form');
+                    const input = document.getElementById('chat-panel-input');
+                    const messagesEl = document.getElementById('chat-panel-messages');
+
+                    let conversation = [];
+
+                    console.log({
+                        panel,
+                        closeBtn,
+                        form,
+                        input,
+                        messagesEl,
+                        chatButtons: document.querySelectorAll('.chat-btn')
+                    });
+                    if (!panel || !closeBtn || !form || !input || !messagesEl) return;
+
+                    // 1) Abre el chat y carga el contexto system
+                    document.querySelectorAll('.chat-btn').forEach(btn => {
+                        btn.addEventListener('click', () => {
+                            const evalId = btn.dataset.evalId;
+                            const plain = document.getElementById(`plain-text-${evalId}`);
+                            if (!plain) return console.error(`No existe #plain-text-${evalId}`);
+
+                            conversation = [{
+                                role: 'system',
+                                content: `Contexto de la evaluación:\n${plain.innerText.trim()}`
+                            }];
+
+                            messagesEl.innerHTML = '';
+                            panel.classList.remove('hidden');
+                            setTimeout(() => {
+                                panel.scrollIntoView({
+                                    behavior: 'smooth',
+                                    block: 'start'
+                                });
+                                input.focus();
+                            }, 50);
+                        });
+                    });
+
+                    // 2) Cierra el panel
+                    closeBtn.addEventListener('click', () => panel.classList.add('hidden'));
+
+                    // 3) Envía mensaje y procesa respuesta
+                    form.addEventListener('submit', async e => {
+                        e.preventDefault();
+                        const text = input.value.trim();
+                        if (!text) return;
+
+                        // (A) Muestra tu mensaje en la UI
+                        const you = document.createElement('div');
+                        you.className = 'text-right bg-indigo-100 px-2 py-1 rounded';
+                        you.innerText = text;
+                        messagesEl.appendChild(you);
+                        messagesEl.scrollTop = messagesEl.scrollHeight;
+
+                        conversation.push({
+                            role: 'user',
+                            content: text
+                        });
+                        input.value = '';
+
+                        try {
+                            const resp = await fetch("{% url 'api_chat' %}", {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify({
+                                    messages: conversation
+                                })
+                            });
+
+                            // (B) Gestiona errores HTTP
+                            if (!resp.ok) {
+                                const err = await resp.json().catch(() => null);
+                                console.error('API Error:', err || resp.statusText);
+                                const botErr = document.createElement('div');
+                                botErr.className = 'text-left text-red-600 px-2 py-1 rounded';
+                                botErr.innerText =
+                                    `Error: ${err?.error || resp.status + ' ' + resp.statusText}`;
+                                messagesEl.appendChild(botErr);
+                                return;
+                            }
+
+                            // Sólo si ok, parsea la respuesta
+                            const {
+                                reply
+                            } = await resp.json();
+
+                            conversation.push({
+                                role: 'assistant',
+                                content: reply
+                            });
+                            const bot = document.createElement('div');
+                            bot.className = 'text-left bg-gray-100 px-2 py-1 rounded';
+                            bot.innerText = reply;
+                            messagesEl.appendChild(bot);
+                            messagesEl.scrollTop = messagesEl.scrollHeight;
+
+                        } catch (err) {
+                            console.error('Fetch error:', err);
+                            const netErr = document.createElement('div');
+                            netErr.className = 'text-left text-red-600 px-2 py-1 rounded';
+                            netErr.innerText = `Error de red: ${err.message}`;
+                            messagesEl.appendChild(netErr);
+                        }
+                    });
+                });
+            </script>
 </body>
 
 </html>
