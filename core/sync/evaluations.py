@@ -26,7 +26,7 @@ def remove_time_param(url: str) -> str:
     return urllib.parse.urlunparse(parsed._replace(query=new_q))
 
 
-def scrape_evaluations() -> list[dict]:
+def scrape_evaluations(ci: str, password: str) -> list[dict]:
     """
     Con Selenium y Requests:
       1. Hace login (iniciar_sesion usa tus creds de .env).
@@ -39,7 +39,8 @@ def scrape_evaluations() -> list[dict]:
       fecha_inicio, fecha_cierre, contenido_html
     """
     BASE_URL = "https://pregrado.campusvirtualuba.net.ve/trimestre/"
-    driver = iniciar_sesion()
+    # Inicia sesión con las credenciales que viene en la tarea
+    driver = iniciar_sesion(ci, password)
 
     # 1) Copiar cookies de Selenium a Requests
     session = requests.Session()

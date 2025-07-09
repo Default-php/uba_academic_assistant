@@ -168,9 +168,9 @@ SWAGGER_SETTINGS = {
     'DEFAULT_AUTO_SCHEMA_CLASS': 'drf_yasg.inspectors.SwaggerAutoSchema',
 }
 
-
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.SessionAuthentication',
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ]
 }
@@ -196,6 +196,9 @@ LOGGING = {
 
 # Internationalization
 # https://docs.djangoproject.com/en/5.2/topics/i18n/
+
+LOGIN_URL = '/login-page/'
+LOGIN_REDIRECT_URL = '/dashboard/'
 
 LANGUAGE_CODE = 'en-us'
 

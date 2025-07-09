@@ -104,7 +104,7 @@ class Evaluation(models.Model):
                    on_delete=models.CASCADE,
                    related_name='evaluations'
                  )
-    moodle_id  = models.CharField(max_length=20, unique=True)
+    moodle_id  = models.CharField(max_length=20)
     titulo     = models.TextField()
     url        = models.URLField()
     numero     = models.CharField(max_length=50, null=True, blank=True)
@@ -116,6 +116,9 @@ class Evaluation(models.Model):
     contenido_html = models.TextField(blank=True, null=True)
     fecha_inicio   = models.CharField(max_length=100, null=True, blank=True)
     fecha_cierre   = models.CharField(max_length=100, null=True, blank=True)
+
+    class Meta:
+        unique_together = ('user', 'moodle_id')
 
     def __str__(self):
         # Mostramos el título y materia

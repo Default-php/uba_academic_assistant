@@ -57,9 +57,9 @@ def sync_for_user(user_id: int, ci: str, password: str):
         logger.info("   → Limpiando evaluaciones previas del usuario…")
         Evaluation.objects.filter(user=user).delete()
 
-        # 6) Scrape Evaluaciones
+        # 6) Scrape Evaluaciones (ahora pasamos CI y password)
         logger.info("   → Scrapeando evaluaciones…")
-        evals_data = scrape_evaluations()
+        evals_data = scrape_evaluations(ci, password)
         logger.info(f"   → Encontradas {len(evals_data)} evaluaciones")
         for ev in evals_data:
             try:
@@ -69,6 +69,7 @@ def sync_for_user(user_id: int, ci: str, password: str):
                 continue
 
             obj, created = Evaluation.objects.update_or_create(
+                # lookup incluye user + moodle_id
                 user=user,
                 moodle_id=ev["moodle_id"],
                 defaults={

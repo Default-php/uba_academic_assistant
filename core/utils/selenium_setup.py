@@ -10,12 +10,14 @@ import time
 
 # Cargar .env para credenciales
 load_dotenv()
-USERNAME = os.getenv("UBA_USERNAME")
-PASSWORD = os.getenv("UBA_PASSWORD")
+# USERNAME = os.getenv("UBA_USERNAME")
+# PASSWORD = os.getenv("UBA_PASSWORD")
+# podemos seguir cargando .env para otros usos, pero no usaremos estas vars
+
 LOGIN_URL = "https://pregrado.campusvirtualuba.net.ve/trimestre/login/index.php"
 
 
-def iniciar_sesion():
+def iniciar_sesion(ci: str, password: str):
     """Inicia sesión y devuelve el driver con sesión activa."""
     options = Options()
     options.add_argument('--headless')
@@ -25,8 +27,9 @@ def iniciar_sesion():
     driver.get(LOGIN_URL)
 
     time.sleep(1)
-    driver.find_element(By.ID, "username").send_keys(USERNAME)
-    driver.find_element(By.ID, "password").send_keys(PASSWORD + Keys.RETURN)
+    driver.find_element(By.ID, "username").send_keys(ci)
+    driver.find_element(By.ID, "password").send_keys(password + Keys.RETURN)
+
     time.sleep(2)
     return driver
 

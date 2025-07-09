@@ -41,8 +41,8 @@
 <body class="bg-gray-50 text-gray-900">
     <div class="max-w-6xl mx-auto px-4 py-8">
 
-        <!-- BLOQUE INVITADO -->
-        <div id="guest-container" class="text-center space-y-4">
+        {# — BLOQUE INVITADO — #} {% if not user.is_authenticated %}
+        <div class="text-center space-y-4">
             <h2 class="text-3xl font-bold">Bienvenido al Asistente Académico UBA</h2>
             <p class="text-lg text-gray-700">
                 Para ver tus evaluaciones sincronizadas, debes iniciar sesión.
@@ -62,35 +62,40 @@
                 <li>Acceder desde cualquier dispositivo</li>
             </ul>
         </div>
+        {% endif %} {# — BLOQUE DASHBOARD — #} {% if user.is_authenticated %}
+        <div>
+            <p id="welcome" class="mb-4 text-xl">
+                Bienvenido, {{ request.user.nombre_completo }}
+            </p>
 
-        <!-- BLOQUE DASHBOARD (autenticado) -->
-        <div id="dashboard-container" class="hidden">
-            <p id="welcome" class="mb-4 text-xl">Bienvenido, …</p>
             <div class="flex items-center space-x-4 mb-6">
-                <button id="sync-btn" class="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700">
-                    Sincronizar Evaluaciones
+                <button id="sync-btn" class="border border-indigo-600 bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700">
+                Sincronizar Evaluaciones
                 </button>
                 <div id="sync-spinner" class="hidden text-indigo-600 font-medium">
                     ⏳ Sincronizando…
                 </div>
-                <button id="logout-btn" class="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700">
-                    Cerrar sesión
-                </button>
+
+                <a id="logout-btn" href="{% url 'logout' %}" class="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700">
+      Cerrar sesión
+    </a>
             </div>
 
             <h1 class="text-4xl font-bold mb-6">📚 Evaluaciones por Materia</h1>
+
             {% for subject in subjects %}
             <div class="mb-8 bg-white shadow-lg rounded-lg p-6">
                 <div class="flex justify-between items-center">
                     <h2 class="text-2xl font-semibold text-blue-700">{{ subject.nombre }}</h2>
                     <button class="subject-toggle-btn" data-target="subject-{{ subject.pk }}">
-                        <span class="chevron">&#9660;</span>
-                    </button>
+          <span class="chevron">&#9660;</span>
+        </button>
                 </div>
+
                 <div id="subject-{{ subject.pk }}" class="subject-evaluations hidden">
-                    {% if subject.evaluations.all %}
+                    {% if subject.user_evals %}
                     <ul class="space-y-4">
-                        {% for ev in subject.evaluations.all %}
+                        {% for ev in subject.user_evals %}
                         <li class="border rounded p-4 hover:bg-gray-50 transition">
                             <div class="flex justify-between items-center">
                                 <div>
@@ -98,12 +103,12 @@
                                     <p class="text-sm text-gray-600">
                                         <strong>Tipo:</strong> {{ ev.tipo }} |
                                         <strong>Unidad:</strong> {{ ev.unidad }} |
-                                        <strong>Fecha:</strong> {{ ev.fecha_inicio|date:"d/m/Y" }} - {{ ev.fecha_cierre|date:"d/m/Y" }}
+                                        <strong>Fecha:</strong> {{ ev.fecha_inicio|date:"d/m/Y" }} – {{ ev.fecha_cierre|date:"d/m/Y" }}
                                     </p>
                                 </div>
                                 <button class="toggle-btn" data-target="evaluation-{{ ev.pk }}">
-                                    <span class="chevron">&#9660;</span>
-                                </button>
+                    <span class="chevron">&#9660;</span>
+                  </button>
                             </div>
                             <div class="mt-2 text-sm text-gray-700 evaluation-preview">
                                 {{ ev.contenido_html|safe|truncatechars_html:300 }}
@@ -119,116 +124,106 @@
                     {% endif %}
                 </div>
             </div>
+            {% empty %}
+            <p class="text-gray-500">Aún no has sincronizado ninguna evaluación.</p>
             {% endfor %}
+
         </div>
+        {% endif %}
 
-    </div>
-
-    <!-- Lógica de UI: invitado vs. autenticado, bienvenida, logout y sync -->
-    <script>
-        document.addEventListener('DOMContentLoaded', async() => {
-            const token = localStorage.getItem('access');
-            const guestEl = document.getElementById('guest-container');
-            const dashEl = document.getElementById('dashboard-container');
-            const welcome = document.getElementById('welcome');
-
-            if (!token) {
-                guestEl.classList.remove('hidden');
-                dashEl.classList.add('hidden');
-                return;
-            }
-
-            guestEl.classList.add('hidden');
-            dashEl.classList.remove('hidden');
-
-            // Cargar nombre del usuario
-            try {
-                const res = await fetch('/api/users/me/', {
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    }
-                });
-                if (res.ok) {
-                    const {
-                        nombre_completo
-                    } = await res.json();
-                    welcome.textContent = `Bienvenido, ${nombre_completo}`;
-                }
-            } catch (e) {
-                console.error(e);
-            }
-
-            // Logout
-            document.getElementById('logout-btn').addEventListener('click', () => {
-                localStorage.removeItem('access');
-                localStorage.removeItem('refresh');
-                window.location.href = "{% url 'login' %}";
-            });
-
-            // Sincronización asíncrona
-            const syncBtn = document.getElementById('sync-btn');
-            const spinner = document.getElementById('sync-spinner');
-
-            syncBtn.addEventListener('click', async() => {
-                const ci = prompt('Ingresa tu CI:');
-                const password = prompt('Ingresa tu contraseña UBA:');
-                if (!ci || !password) return;
-
-                spinner.classList.remove('hidden');
-
-                await fetch('/api/users/sync/', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`
-                    },
-                    body: JSON.stringify({
-                        ci,
-                        password
-                    })
-                });
-
-                // Polling hasta completar
-                const check = setInterval(async() => {
-                    const resp = await fetch('/api/users/sync-status/', {
-                        headers: {
-                            'Authorization': `Bearer ${token}`
-                        }
+        <!-- Toggles de evaluación y materia -->
+        <script>
+            document.addEventListener('DOMContentLoaded', () => {
+                document.querySelectorAll('.toggle-btn').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const target = document.getElementById(btn.dataset.target);
+                        const prev = target.parentElement.querySelector('.evaluation-preview');
+                        target.classList.toggle('hidden');
+                        if (prev) prev.classList.toggle('hidden');
+                        btn.classList.toggle('rotated');
                     });
-                    const {
-                        is_synced
-                    } = await resp.json();
-                    if (is_synced) {
-                        clearInterval(check);
-                        spinner.classList.add('hidden');
-                        window.location.reload();
-                    }
-                }, 2000);
+                });
+                document.querySelectorAll('.subject-toggle-btn').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        document.getElementById(btn.dataset.target)
+                            .classList.toggle('hidden');
+                        btn.classList.toggle('rotated');
+                    });
+                });
             });
-        });
-    </script>
+        </script>
 
-    <!-- Toggles de evaluación y materia -->
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            document.querySelectorAll('.toggle-btn').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    const target = document.getElementById(btn.dataset.target);
-                    const prev = target.parentElement.querySelector('.evaluation-preview');
-                    target.classList.toggle('hidden');
-                    if (prev) prev.classList.toggle('hidden');
-                    btn.classList.toggle('rotated');
+        <script>
+            // Helper para leer la cookie CSRF
+            function getCookie(name) {
+                let cookieValue = null;
+                if (document.cookie && document.cookie !== '') {
+                    for (let cookie of document.cookie.split(';')) {
+                        cookie = cookie.trim();
+                        if (cookie.startsWith(name + '=')) {
+                            cookieValue = decodeURIComponent(cookie.slice(name.length + 1));
+                            break;
+                        }
+                    }
+                }
+                return cookieValue;
+            }
+
+            document.addEventListener('DOMContentLoaded', () => {
+                const syncBtn = document.getElementById('sync-btn');
+                const spinner = document.getElementById('sync-spinner');
+                if (!syncBtn || !spinner) {
+                    console.error('No encuentro sync-btn o sync-spinner en el DOM');
+                    return;
+                }
+
+                syncBtn.addEventListener('click', async() => {
+                    console.log('👉 Click en Sincronizar'); // <-- debug
+                    const ci = prompt('Ingresa tu CI:');
+                    const password = prompt('Ingresa tu contraseña UBA:');
+                    if (!ci || !password) return;
+
+                    spinner.classList.remove('hidden');
+
+                    try {
+                        const res = await fetch('/api/users/sync/', {
+                            method: 'POST',
+                            credentials: 'same-origin',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRFToken': getCookie('csrftoken')
+                            },
+                            body: JSON.stringify({
+                                ci,
+                                password
+                            })
+                        });
+                        console.log('sync POST status:', res.status);
+
+                        // Polling del estado
+                        const check = setInterval(async() => {
+                            const resp = await fetch('/api/users/sync-status/', {
+                                credentials: 'same-origin'
+                            });
+                            const {
+                                is_synced
+                            } = await resp.json();
+                            console.log('is_synced?', is_synced);
+                            if (is_synced) {
+                                clearInterval(check);
+                                spinner.classList.add('hidden');
+                                window.location.reload();
+                            }
+                        }, 2000);
+
+                    } catch (err) {
+                        console.error('Error en sync:', err);
+                        spinner.classList.add('hidden');
+                    }
                 });
             });
-            document.querySelectorAll('.subject-toggle-btn').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    document.getElementById(btn.dataset.target)
-                        .classList.toggle('hidden');
-                    btn.classList.toggle('rotated');
-                });
-            });
-        });
-    </script>
+        </script>
+
 </body>
 
 </html>
