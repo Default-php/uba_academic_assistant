@@ -107,7 +107,8 @@
                                     </p>
                                 </div>
                                 <!-- NUEVO: botón Chat -->
-                                <button class="chat-btn bg-green-600 text-white px-2 py-1 rounded hover:bg-green-700 mr-2" data-eval-id="{{ ev.pk }}">
+                                <button class="chat-btn bg-green-600 text-white px-2 py-1 rounded hover:bg-green-700 mr-2" data-eval-id="{{ ev.pk }}" data-materia="{{ ev.subject.nombre|escape }}" data-title="{{ ev.titulo|escape }}" data-student-name="{{ user.nombre_completo|escape }}"
+                                    data-assistant-info="Eres un asistente virtual para una app web de la Universidad Bicentenaria de Aragua; brinda detalles precisos de la universidad si se te solicitan y ayuda con la evaluación proporcionada.">
                                     💬 Chat
                                 </button>
                                 <!-- toggle original -->
@@ -270,53 +271,100 @@
                     const form = document.getElementById('chat-panel-form');
                     const input = document.getElementById('chat-panel-input');
                     const messagesEl = document.getElementById('chat-panel-messages');
-
                     let conversation = [];
 
-                    console.log({
-                        panel,
-                        closeBtn,
-                        form,
-                        input,
-                        messagesEl,
-                        chatButtons: document.querySelectorAll('.chat-btn')
-                    });
                     if (!panel || !closeBtn || !form || !input || !messagesEl) return;
 
-                    // 1) Abre el chat y carga el contexto system
+                    // 1) Al hacer click: solo envío el SYSTEM, luego pido al asistente su saludo inicial
                     document.querySelectorAll('.chat-btn').forEach(btn => {
-                        btn.addEventListener('click', () => {
+                        btn.addEventListener('click', async() => {
                             const evalId = btn.dataset.evalId;
                             const plain = document.getElementById(`plain-text-${evalId}`);
-                            if (!plain) return console.error(`No existe #plain-text-${evalId}`);
+                            const title = btn.dataset.title || '';
+                            const studentName = btn.dataset.studentName || '';
+                            const materia = btn.dataset.materia || '';
+                            const assistantInfo = btn.dataset.assistantInfo || '';
+
+                            if (!plain) {
+                                console.error(`No existe #plain-text-${evalId}`);
+                                return;
+                            }
+
+                            // Bloques de contexto
+                            const blocks = [
+                                `Materia: ${materia}`,
+                                `Contexto de la evaluación:\n${plain.innerText.trim()}`,
+                                `Título de la evaluación: ${title}`,
+                                `Nombre del estudiante: ${studentName}`,
+                                assistantInfo,
+                                // NUEVA PAUTA: saludo y presentación
+                                `Al responder por primera vez, saluda al estudiante por su primer nombre (${studentName.split(' ')[0]}), preséntate como asistente virtual de la Universidad Bicentenaria de Aragua y pregunta en qué puedes ayudar con esta evaluación, mencionando el número de actividad sumativa y el nombre de la evaluación junto con el tipo de evaluación.`
+                            ].filter(Boolean);
 
                             conversation = [{
                                 role: 'system',
-                                content: `Contexto de la evaluación:\n${plain.innerText.trim()}`
+                                content: blocks.join('\n\n')
                             }];
 
+                            // Limpio la UI y muestro el panel
                             messagesEl.innerHTML = '';
                             panel.classList.remove('hidden');
-                            setTimeout(() => {
-                                panel.scrollIntoView({
-                                    behavior: 'smooth',
-                                    block: 'start'
+                            panel.scrollIntoView({
+                                behavior: 'smooth',
+                                block: 'start'
+                            });
+
+                            // 2) Llamo de inmediato al endpoint para que GPT genere su saludo inicial
+                            try {
+                                const resp = await fetch("{% url 'api_chat' %}", {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json'
+                                    },
+                                    body: JSON.stringify({
+                                        messages: conversation
+                                    })
                                 });
-                                input.focus();
-                            }, 50);
+
+                                const {
+                                    reply
+                                } = await resp.json();
+                                // Agrego el saludo al historial
+                                conversation.push({
+                                    role: 'assistant',
+                                    content: reply
+                                });
+
+                                // Muestro el saludo en la UI
+                                const botBubble = document.createElement('div');
+                                botBubble.className = 'text-left bg-gray-100 px-2 py-1 rounded';
+                                botBubble.innerText = reply;
+                                messagesEl.appendChild(botBubble);
+                                messagesEl.scrollTop = messagesEl.scrollHeight;
+
+                            } catch (err) {
+                                console.error('Error al obtener saludo inicial:', err);
+                                const errBubble = document.createElement('div');
+                                errBubble.className = 'text-left text-red-600 px-2 py-1 rounded';
+                                errBubble.innerText = `Error: ${err.message}`;
+                                messagesEl.appendChild(errBubble);
+                            }
+
+                            // 3) Preparo el foco para que el usuario comience a escribir
+                            setTimeout(() => input.focus(), 100);
                         });
                     });
 
-                    // 2) Cierra el panel
+                    // 4) Cierra el panel
                     closeBtn.addEventListener('click', () => panel.classList.add('hidden'));
 
-                    // 3) Envía mensaje y procesa respuesta
+                    // 5) Envío de las preguntas del usuario (sigue igual)
                     form.addEventListener('submit', async e => {
                         e.preventDefault();
                         const text = input.value.trim();
                         if (!text) return;
 
-                        // (A) Muestra tu mensaje en la UI
+                        // burbuja del usuario
                         const you = document.createElement('div');
                         you.className = 'text-right bg-indigo-100 px-2 py-1 rounded';
                         you.innerText = text;
@@ -340,27 +388,14 @@
                                 })
                             });
 
-                            // (B) Gestiona errores HTTP
-                            if (!resp.ok) {
-                                const err = await resp.json().catch(() => null);
-                                console.error('API Error:', err || resp.statusText);
-                                const botErr = document.createElement('div');
-                                botErr.className = 'text-left text-red-600 px-2 py-1 rounded';
-                                botErr.innerText =
-                                    `Error: ${err?.error || resp.status + ' ' + resp.statusText}`;
-                                messagesEl.appendChild(botErr);
-                                return;
-                            }
-
-                            // Sólo si ok, parsea la respuesta
                             const {
                                 reply
                             } = await resp.json();
-
                             conversation.push({
                                 role: 'assistant',
                                 content: reply
                             });
+
                             const bot = document.createElement('div');
                             bot.className = 'text-left bg-gray-100 px-2 py-1 rounded';
                             bot.innerText = reply;
