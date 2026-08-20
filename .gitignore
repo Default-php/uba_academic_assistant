@@ -1,12 +1,11 @@
 # Entorno virtual
-env/
-venv/
-ENV/
+.venv/
 *.pyc
 __pycache__/
 
 # Archivos de entorno y variables secretas
 .env
+.ignore
 
 # Librerías de Node.js
 node_modules/
@@ -26,4 +25,4 @@ Thumbs.db
 **/migrations/__pycache__/
 
 # Contenido generado dinámicamente
-/media/evaluaciones/
+/media/
