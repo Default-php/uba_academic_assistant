@@ -1,0 +1,20 @@
+# Dependencias mínimas y deliberadas. Añadir de forma explícita,
+# nunca con `pip freeze`.
+Django==5.2.3
+djangorestframework==3.16.0
+djangorestframework_simplejwt==5.5.0
+drf-yasg==1.21.10
+django-cors-headers==4.7.0
+django_q @ git+https://github.com/Koed00/django-q.git@85baaccd2c3adfe0a414d4237465163e9ff6e5a0
+# django-q 1.3.9 declara estas dependencias de runtime, pero la instalación
+# desde git no las trae; se añaden de forma explícita.
+arrow==1.3.0
+blessed==1.20.0
+django-picklefield==3.3
+selenium==4.33.0
+webdriver-manager==4.0.2
+requests==2.32.4
+beautifulsoup4==4.13.4
+python-dotenv==1.1.0
+psycopg[binary]==3.2.9
+ruff==0.11.10
