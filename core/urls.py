@@ -16,7 +16,6 @@ from .views import (
     EvaluationViewSet,
     GradeViewSet,
     ConsultationResourceViewSet,
-    AgentInteractionViewSet,
 )
 
 
@@ -27,7 +26,6 @@ router.register(r'inscriptions', InscriptionViewSet)
 router.register(r'evaluations', EvaluationViewSet)
 router.register(r'grades', GradeViewSet)
 router.register(r'resources', ConsultationResourceViewSet)
-router.register(r'interactions', AgentInteractionViewSet)
 
 
 urlpatterns = [

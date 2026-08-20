@@ -1,7 +1,3 @@
-from django.contrib.auth.mixins import LoginRequiredMixin
-from django.views.generic import TemplateView
-from django.shortcuts import get_object_or_404
-from django.utils.html import strip_tags
 from django_q.tasks import async_task
 from django.http import JsonResponse
 from rest_framework import viewsets
@@ -17,12 +13,12 @@ from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 from .models import (
     User, Subject, Inscription, Evaluation,
-    Grade, ConsultationResource, AgentInteraction
+    Grade, ConsultationResource
 )
 from .serializers import (
     UserSerializer, SubjectSerializer, InscriptionSerializer,
     EvaluationSerializer, GradeSerializer,
-    ConsultationResourceSerializer, AgentInteractionSerializer,
+    ConsultationResourceSerializer,
     RegisterSerializer
 )
 
@@ -35,17 +31,6 @@ def api_root(request):
         "api": "/api/"
     })
 
-class EvaluationChatView(LoginRequiredMixin, TemplateView):
-    template_name = 'evaluation_chat.html'
-
-    def get_context_data(self, **kwargs):
-        ctx = super().get_context_data(**kwargs)
-        ev = get_object_or_404(Evaluation, pk=kwargs['eval_id'], user=self.request.user)
-        # extrae texto plano de ev.contenido_html
-        ctx['plain_text'] = strip_tags(ev.contenido_html)
-        ctx['eval'] = ev
-        return ctx
-    
 class RegisterView(CreateAPIView):
     serializer_class = RegisterSerializer
     parser_classes = [JSONParser]
@@ -147,9 +132,4 @@ class GradeViewSet(viewsets.ModelViewSet):
 class ConsultationResourceViewSet(viewsets.ModelViewSet):
     queryset = ConsultationResource.objects.all()
     serializer_class = ConsultationResourceSerializer
-
-
-class AgentInteractionViewSet(viewsets.ModelViewSet):
-    queryset = AgentInteraction.objects.all()
-    serializer_class = AgentInteractionSerializer
 
