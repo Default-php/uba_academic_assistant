@@ -9,6 +9,7 @@ from rest_framework.generics import CreateAPIView
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.exceptions import TokenError
 from django.db.models import Prefetch
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
@@ -81,11 +82,17 @@ class LogoutView(APIView):
         refresh_token = request.data.get('refresh')
         if not refresh_token:
             return Response(status=status.HTTP_400_BAD_REQUEST)
-        token = RefreshToken(refresh_token)
-        token.blacklist()
+        try:
+            token = RefreshToken(refresh_token)
+            token.blacklist()
+        except TokenError:
+            return Response(
+                {'detail': 'Token inválido o expirado'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
         return Response(status=status.HTTP_205_RESET_CONTENT)
 
-class UserViewSet(viewsets.ModelViewSet):
+class UserViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserSerializer
     permission_classes = [IsAuthenticated]

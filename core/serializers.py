@@ -17,7 +17,10 @@ class RegisterSerializer(serializers.ModelSerializer):
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = '__all__'
+        fields = [
+            'id', 'ci', 'nombre_completo', 'correo', 'carrera',
+            'trimestre', 'fecha_registro', 'is_synced', 'last_synced',
+        ]
 
 
 class SubjectSerializer(serializers.ModelSerializer):
