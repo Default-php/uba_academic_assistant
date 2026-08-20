@@ -1,7 +1,5 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .auth_views import RegisterView, LogoutView
-from core.view.dashboard import dashboard_view, register_view, login_view
 from rest_framework_simplejwt.views import (
     TokenObtainPairView,
     TokenRefreshView,
@@ -9,6 +7,7 @@ from rest_framework_simplejwt.views import (
 
 from .views import (
     RegisterView,
+    LogoutView,
     api_root,
     UserViewSet,
     SubjectViewSet,

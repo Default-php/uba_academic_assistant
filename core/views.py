@@ -8,6 +8,7 @@ from rest_framework.parsers import JSONParser
 from rest_framework.generics import CreateAPIView
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
+from rest_framework_simplejwt.tokens import RefreshToken
 from django.db.models import Prefetch
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
@@ -73,9 +74,26 @@ class RegisterView(CreateAPIView):
             return Response({"mensaje": "Usuario creado correctamente"}, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+class LogoutView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        refresh_token = request.data.get('refresh')
+        if not refresh_token:
+            return Response(status=status.HTTP_400_BAD_REQUEST)
+        token = RefreshToken(refresh_token)
+        token.blacklist()
+        return Response(status=status.HTTP_205_RESET_CONTENT)
+
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        if self.request.user.is_staff:
+            return User.objects.all()
+        return User.objects.filter(pk=self.request.user.pk)
     
     @action(detail=False, methods=['get'], permission_classes=[IsAuthenticated])
     def me(self, request):
@@ -113,23 +131,50 @@ class SubjectViewSet(viewsets.ModelViewSet):
         )
     )
     serializer_class = SubjectSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return Subject.objects.filter(
+            evaluations__user=self.request.user
+        ).distinct().prefetch_related(
+            Prefetch(
+                'evaluations',
+                queryset=Evaluation.objects
+                                  .filter(user=self.request.user)
+                                  .order_by('fecha_inicio'),
+                to_attr='user_evals'
+            )
+        )
 
 class InscriptionViewSet(viewsets.ModelViewSet):
     queryset = Inscription.objects.all()
     serializer_class = InscriptionSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return Inscription.objects.filter(usuario=self.request.user)
 
 
 class EvaluationViewSet(viewsets.ModelViewSet):
     queryset = Evaluation.objects.all()
     serializer_class = EvaluationSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return Evaluation.objects.filter(user=self.request.user)
 
 
 class GradeViewSet(viewsets.ModelViewSet):
     queryset = Grade.objects.all()
     serializer_class = GradeSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return Grade.objects.filter(usuario=self.request.user)
 
 
 class ConsultationResourceViewSet(viewsets.ModelViewSet):
     queryset = ConsultationResource.objects.all()
     serializer_class = ConsultationResourceSerializer
+    permission_classes = [IsAuthenticated]
 
