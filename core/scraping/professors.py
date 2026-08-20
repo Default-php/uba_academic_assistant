@@ -7,11 +7,10 @@ from core.scraping.constants import BASE_URL, TEACHER_LINK_SELECTOR
 
 def scrape_professors(client) -> list[dict]:
     """
-    Hace login y para cada materia en la BD extrae el nombre del profesor.
+    Asume que el cliente ya está autenticado (login hecho por el llamador).
+    Para cada materia en la BD extrae el nombre del profesor.
     Devuelve lista de dicts: {"codigo", "profesor"}.
     """
-    client.login()
-
     professors = []
     for subj in Subject.objects.all():
         course_url = f"{BASE_URL}course/view.php?id={subj.codigo}"

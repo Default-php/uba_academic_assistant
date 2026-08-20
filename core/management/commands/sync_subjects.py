@@ -1,3 +1,5 @@
+from getpass import getpass
+
 from django.core.management.base import BaseCommand
 
 from core.scraping.client import MoodleClient
@@ -10,13 +12,14 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument("--ci", required=True, help="Cédula de acceso al campus")
-        parser.add_argument("--password", required=True, help="Contraseña de acceso al campus")
+        parser.add_argument("--password", help="Contraseña de acceso al campus (si se omite, se pide de forma segura)")
 
     def handle(self, *args, **options):
         ci = options["ci"]
-        password = options["password"]
+        password = options["password"] or getpass("Contraseña del campus: ")
 
         with MoodleClient(ci, password) as client:
+            client.login()
             materias = scrape_subjects(client)
 
         save_subjects(materias)

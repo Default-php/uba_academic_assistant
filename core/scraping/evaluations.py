@@ -32,14 +32,13 @@ def remove_time_param(url: str) -> str:
 
 def scrape_evaluations(client) -> list[dict]:
     """
+    Asume que el cliente ya está autenticado (login hecho por el llamador).
     Itera sobre todas las materias en la BD y extrae sus evaluaciones.
     Descarga imágenes a media/evaluaciones y limpia videos.
     Devuelve lista de dicts con keys:
       subject_codigo, moodle_id, titulo, numero, unidad, tipo, seccion,
       profesor, porcentaje, fecha_inicio, fecha_cierre, contenido_html, url.
     """
-    client.login()
-
     # Copiar cookies de Selenium a Requests
     session = client.cookies_to_requests()
 
@@ -109,7 +108,8 @@ def scrape_evaluations(client) -> list[dict]:
                         src = remove_time_param(src)
 
                         try:
-                            r = session.get(src, stream=True); r.raise_for_status()
+                            r = session.get(src, stream=True)
+                            r.raise_for_status()
                             ct = r.headers.get("Content-Type", "").lower()
                             if not ct.startswith("image/"):
                                 continue

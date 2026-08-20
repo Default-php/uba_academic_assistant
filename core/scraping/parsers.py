@@ -56,9 +56,6 @@ def parse_evaluation_text(text):
         resultado["tipo"] = match.group(1).strip()
 
     # Fechas (inicio y cierre)
-    fecha_inicio = None
-    fecha_cierre = None
-
     # Manejar diferentes patrones de fechas con regex
     match_fechas = re.findall(r"(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})\s*(a las)?\s*(\d{1,2}:\d{2})?", texto)
     if len(match_fechas) >= 2:

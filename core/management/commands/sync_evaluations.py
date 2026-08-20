@@ -1,5 +1,7 @@
+from getpass import getpass
+
 from django.contrib.auth import get_user_model
-from django.core.management.base import BaseCommand
+from django.core.management.base import BaseCommand, CommandError
 
 from core.scraping.client import MoodleClient
 from core.scraping.evaluations import scrape_evaluations
@@ -17,21 +19,19 @@ class Command(BaseCommand):
             required=True,
             help="Cédula del usuario de la app (también usada como login del campus)",
         )
-        parser.add_argument("--password", required=True, help="Contraseña de acceso al campus")
+        parser.add_argument("--password", help="Contraseña de acceso al campus (si se omite, se pide de forma segura)")
 
     def handle(self, *args, **options):
         ci = options["ci"]
-        password = options["password"]
+        password = options["password"] or getpass("Contraseña del campus: ")
 
         try:
             user = User.objects.get(ci=ci)
         except User.DoesNotExist:
-            self.stderr.write(self.style.ERROR(
-                f"No existe un usuario con cédula {ci}"
-            ))
-            return
+            raise CommandError(f"No existe un usuario con cédula {ci}")
 
         with MoodleClient(ci, password) as client:
+            client.login()
             entries = scrape_evaluations(client)
 
         save_evaluations(user, entries)

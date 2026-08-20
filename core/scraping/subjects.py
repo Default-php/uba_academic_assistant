@@ -7,10 +7,10 @@ from core.scraping.parsers import extraer_trimestre_y_nombre
 
 def scrape_subjects(client) -> list[dict]:
     """
-    Hace login y extrae la lista de materias del campus.
+    Asume que el cliente ya está autenticado (login hecho por el llamador).
+    Extrae la lista de materias del campus.
     Devuelve lista de dicts: {"codigo", "nombre", "trimestre"}.
     """
-    client.login()
     client.go(COURSES_URL)
 
     links = client.driver.find_elements(By.CSS_SELECTOR, COURSE_LINK_SELECTOR)
