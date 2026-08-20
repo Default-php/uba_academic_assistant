@@ -1,0 +1,417 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Panel Académico</title>
+    <link href="{% static 'css/output.css' %}" rel="stylesheet">
+    <style>
+        .hidden {
+            display: none !important;
+        }
+        
+        .toggle-btn,
+        .subject-toggle-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            transition: transform 0.3s ease;
+        }
+        
+        .toggle-btn {
+            font-size: 1.5rem;
+        }
+        
+        .subject-toggle-btn {
+            font-size: 1.75rem;
+        }
+        
+        .chevron {
+            display: inline-block;
+            transition: transform 0.3s ease;
+        }
+        
+        .rotated .chevron {
+            transform: rotate(180deg);
+        }
+    </style>
+</head>
+
+<body class="bg-gray-50 text-gray-900">
+    <div class="max-w-6xl mx-auto px-4 py-8">
+
+        {# — BLOQUE INVITADO — #} {% if not user.is_authenticated %}
+        <div class="text-center space-y-4">
+            <h2 class="text-3xl font-bold">Bienvenido al Asistente Académico UBA</h2>
+            <p class="text-lg text-gray-700">
+                Para ver tus evaluaciones sincronizadas, debes iniciar sesión.
+            </p>
+            <div class="space-x-4">
+                <a href="{% url 'login' %}" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+                    Iniciar Sesión
+                </a>
+                <a href="{% url 'register' %}" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">
+                    Crear Cuenta
+                </a>
+            </div>
+            <p class="text-sm text-gray-500">Con una cuenta podrás:</p>
+            <ul class="list-disc list-inside text-gray-600">
+                <li>Ver todas tus materias y evaluaciones</li>
+                <li>Recibir notificaciones antes de las fechas límite</li>
+                <li>Acceder desde cualquier dispositivo</li>
+            </ul>
+        </div>
+        {% endif %} {# — BLOQUE DASHBOARD — #} {% if user.is_authenticated %}
+        <div>
+            <p id="welcome" class="mb-4 text-xl">
+                Bienvenido, {{ request.user.nombre_completo }}
+            </p>
+
+            <div class="flex items-center space-x-4 mb-6">
+                <button id="sync-btn" class="border border-indigo-600 bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700">
+                Sincronizar Evaluaciones
+                </button>
+                <div id="sync-spinner" class="hidden text-indigo-600 font-medium">
+                    ⏳ Sincronizando…
+                </div>
+
+                <a id="logout-btn" href="{% url 'logout' %}" class="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700">
+      Cerrar sesión
+    </a>
+            </div>
+
+            <h1 class="text-4xl font-bold mb-6">📚 Evaluaciones por Materia</h1>
+
+            {% for subject in subjects %}
+            <div class="mb-8 bg-white shadow-lg rounded-lg p-6">
+                <div class="flex justify-between items-center">
+                    <h2 class="text-2xl font-semibold text-blue-700">{{ subject.nombre }}</h2>
+                    <button class="subject-toggle-btn" data-target="subject-{{ subject.pk }}">
+          <span class="chevron">&#9660;</span>
+        </button>
+                </div>
+
+                <div id="subject-{{ subject.pk }}" class="subject-evaluations hidden">
+                    {% if subject.user_evals %}
+                    <ul class="space-y-4">
+                        {% for ev in subject.user_evals %}
+                        <li class="border rounded p-4 hover:bg-gray-50 transition">
+                            <div class="flex justify-between items-center">
+                                <div>
+                                    <h3 class="text-lg font-bold">{{ ev.titulo }}</h3>
+                                    <p class="text-sm text-gray-600">
+                                        <strong>Tipo:</strong> {{ ev.tipo }} |
+                                        <strong>Unidad:</strong> {{ ev.unidad }} |
+                                        <strong>Fecha:</strong> {{ ev.fecha_inicio|date:"d/m/Y" }} – {{ ev.fecha_cierre|date:"d/m/Y" }}
+                                    </p>
+                                </div>
+                                <!-- NUEVO: botón Chat -->
+                                <button class="chat-btn bg-green-600 text-white px-2 py-1 rounded hover:bg-green-700 mr-2" data-eval-id="{{ ev.pk }}" data-materia="{{ ev.subject.nombre|escape }}" data-title="{{ ev.titulo|escape }}" data-student-name="{{ user.nombre_completo|escape }}"
+                                    data-assistant-info="Eres un asistente virtual para una app web de la Universidad Bicentenaria de Aragua; brinda detalles precisos de la universidad si se te solicitan y ayuda con la evaluación proporcionada.">
+                                    💬 Chat
+                                </button>
+                                <!-- toggle original -->
+                                <button class="toggle-btn" data-target="evaluation-{{ ev.pk }}">
+                                    <span class="chevron">&#9660;</span>
+                                </button>
+                            </div>
+
+                            <div class="mt-2 text-sm text-gray-700 evaluation-preview">
+                                {{ ev.contenido_html|safe|truncatechars_html:300 }}
+                            </div>
+                            <div id="evaluation-{{ ev.pk }}" class="mt-2 text-sm text-gray-700 evaluation-full hidden">
+                                {{ ev.contenido_html|safe }}
+                            </div>
+                            <!-- TEXTO PLANO OCULTO PARA EL CHAT -->
+                            <div id="plain-text-{{ ev.pk }}" class="hidden">{{ ev.contenido_html|striptags }}</div>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    {% else %}
+                    <p class="text-gray-500">No hay evaluaciones registradas.</p>
+                    {% endif %}
+                </div>
+            </div>
+            {% empty %}
+            <p class="text-gray-500">Aún no has sincronizado ninguna evaluación.</p>
+            {% endfor %}
+
+            <!-- ——— Panel de chat al final del dashboard ——— -->
+            <div id="chat-panel" class="hidden 
+         w-full 
+         bg-white shadow-inner 
+         flex flex-col 
+         mt-8 mb-8 
+         rounded-lg border border-gray-200 
+         overflow-hidden 
+         max-h-[70vh]">
+                <!-- Cabecera -->
+                <div class="flex-none flex items-center justify-between 
+           bg-indigo-600 text-white 
+           px-4 py-2 rounded-t-lg">
+                    <h3 class="font-semibold">Asistente UBA</h3>
+                    <button id="chat-close" class="text-xl leading-none">&times;</button>
+                </div>
+
+                <!-- Mensajes (ocupa todo el hueco sobrante y hace scroll) -->
+                <div id="chat-panel-messages" class="flex-1 overflow-y-auto px-4 py-2 space-y-2 text-sm bg-gray-50"></div>
+
+                <!-- Formulario de envío (siempre visible) -->
+                <form id="chat-panel-form" class="flex-none flex items-center border-t 
+           px-4 py-2 bg-white">
+                    <input id="chat-panel-input" type="text" placeholder="Escribe tu pregunta…" class="flex-grow px-3 py-2 mr-2 
+             focus:outline-none rounded-md 
+             border border-gray-300" autocomplete="off" />
+                    <button type="submit" class="bg-indigo-600 text-white px-4 py-2 rounded-md">
+      Enviar
+    </button>
+                </form>
+            </div>
+
+            {% endif %}
+
+            <!-- Toggles de evaluación y materia -->
+            <script>
+                document.addEventListener('DOMContentLoaded', () => {
+                    document.querySelectorAll('.toggle-btn').forEach(btn => {
+                        btn.addEventListener('click', () => {
+                            const target = document.getElementById(btn.dataset.target);
+                            const prev = target.parentElement.querySelector('.evaluation-preview');
+                            target.classList.toggle('hidden');
+                            if (prev) prev.classList.toggle('hidden');
+                            btn.classList.toggle('rotated');
+                        });
+                    });
+                    document.querySelectorAll('.subject-toggle-btn').forEach(btn => {
+                        btn.addEventListener('click', () => {
+                            document.getElementById(btn.dataset.target)
+                                .classList.toggle('hidden');
+                            btn.classList.toggle('rotated');
+                        });
+                    });
+                });
+            </script>
+
+            <script>
+                // Helper para leer la cookie CSRF
+                function getCookie(name) {
+                    let cookieValue = null;
+                    if (document.cookie && document.cookie !== '') {
+                        for (let cookie of document.cookie.split(';')) {
+                            cookie = cookie.trim();
+                            if (cookie.startsWith(name + '=')) {
+                                cookieValue = decodeURIComponent(cookie.slice(name.length + 1));
+                                break;
+                            }
+                        }
+                    }
+                    return cookieValue;
+                }
+
+                document.addEventListener('DOMContentLoaded', () => {
+                    const syncBtn = document.getElementById('sync-btn');
+                    const spinner = document.getElementById('sync-spinner');
+                    if (!syncBtn || !spinner) {
+                        console.error('No encuentro sync-btn o sync-spinner en el DOM');
+                        return;
+                    }
+
+                    syncBtn.addEventListener('click', async() => {
+                        console.log('👉 Click en Sincronizar'); // <-- debug
+                        const ci = prompt('Ingresa tu CI:');
+                        const password = prompt('Ingresa tu contraseña UBA:');
+                        if (!ci || !password) return;
+
+                        spinner.classList.remove('hidden');
+
+                        try {
+                            const res = await fetch('/api/users/sync/', {
+                                method: 'POST',
+                                credentials: 'same-origin',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'X-CSRFToken': getCookie('csrftoken')
+                                },
+                                body: JSON.stringify({
+                                    ci,
+                                    password
+                                })
+                            });
+                            console.log('sync POST status:', res.status);
+
+                            // Polling del estado
+                            const check = setInterval(async() => {
+                                const resp = await fetch('/api/users/sync-status/', {
+                                    credentials: 'same-origin'
+                                });
+                                const {
+                                    is_synced
+                                } = await resp.json();
+                                console.log('is_synced?', is_synced);
+                                if (is_synced) {
+                                    clearInterval(check);
+                                    spinner.classList.add('hidden');
+                                    window.location.reload();
+                                }
+                            }, 2000);
+
+                        } catch (err) {
+                            console.error('Error en sync:', err);
+                            spinner.classList.add('hidden');
+                        }
+                    });
+                });
+            </script>
+
+            <script>
+                document.addEventListener('DOMContentLoaded', () => {
+                    const panel = document.getElementById('chat-panel');
+                    const closeBtn = document.getElementById('chat-close');
+                    const form = document.getElementById('chat-panel-form');
+                    const input = document.getElementById('chat-panel-input');
+                    const messagesEl = document.getElementById('chat-panel-messages');
+                    let conversation = [];
+
+                    if (!panel || !closeBtn || !form || !input || !messagesEl) return;
+
+                    // 1) Al hacer click: solo envío el SYSTEM, luego pido al asistente su saludo inicial
+                    document.querySelectorAll('.chat-btn').forEach(btn => {
+                        btn.addEventListener('click', async() => {
+                            const evalId = btn.dataset.evalId;
+                            const plain = document.getElementById(`plain-text-${evalId}`);
+                            const title = btn.dataset.title || '';
+                            const studentName = btn.dataset.studentName || '';
+                            const materia = btn.dataset.materia || '';
+                            const assistantInfo = btn.dataset.assistantInfo || '';
+
+                            if (!plain) {
+                                console.error(`No existe #plain-text-${evalId}`);
+                                return;
+                            }
+
+                            // Bloques de contexto
+                            const blocks = [
+                                `Materia: ${materia}`,
+                                `Contexto de la evaluación:\n${plain.innerText.trim()}`,
+                                `Título de la evaluación: ${title}`,
+                                `Nombre del estudiante: ${studentName}`,
+                                assistantInfo,
+                                // NUEVA PAUTA: saludo y presentación
+                                `Al responder por primera vez, saluda al estudiante por su primer nombre (${studentName.split(' ')[0]}), preséntate como asistente virtual de la Universidad Bicentenaria de Aragua y pregunta en qué puedes ayudar con esta evaluación, mencionando el número de actividad sumativa y el nombre de la evaluación junto con el tipo de evaluación.`
+                            ].filter(Boolean);
+
+                            conversation = [{
+                                role: 'system',
+                                content: blocks.join('\n\n')
+                            }];
+
+                            // Limpio la UI y muestro el panel
+                            messagesEl.innerHTML = '';
+                            panel.classList.remove('hidden');
+                            panel.scrollIntoView({
+                                behavior: 'smooth',
+                                block: 'start'
+                            });
+
+                            // 2) Llamo de inmediato al endpoint para que GPT genere su saludo inicial
+                            try {
+                                const resp = await fetch("{% url 'api_chat' %}", {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json'
+                                    },
+                                    body: JSON.stringify({
+                                        messages: conversation
+                                    })
+                                });
+
+                                const {
+                                    reply
+                                } = await resp.json();
+                                // Agrego el saludo al historial
+                                conversation.push({
+                                    role: 'assistant',
+                                    content: reply
+                                });
+
+                                // Muestro el saludo en la UI
+                                const botBubble = document.createElement('div');
+                                botBubble.className = 'text-left bg-gray-100 px-2 py-1 rounded';
+                                botBubble.innerText = reply;
+                                messagesEl.appendChild(botBubble);
+                                messagesEl.scrollTop = messagesEl.scrollHeight;
+
+                            } catch (err) {
+                                console.error('Error al obtener saludo inicial:', err);
+                                const errBubble = document.createElement('div');
+                                errBubble.className = 'text-left text-red-600 px-2 py-1 rounded';
+                                errBubble.innerText = `Error: ${err.message}`;
+                                messagesEl.appendChild(errBubble);
+                            }
+
+                            // 3) Preparo el foco para que el usuario comience a escribir
+                            setTimeout(() => input.focus(), 100);
+                        });
+                    });
+
+                    // 4) Cierra el panel
+                    closeBtn.addEventListener('click', () => panel.classList.add('hidden'));
+
+                    // 5) Envío de las preguntas del usuario (sigue igual)
+                    form.addEventListener('submit', async e => {
+                        e.preventDefault();
+                        const text = input.value.trim();
+                        if (!text) return;
+
+                        // burbuja del usuario
+                        const you = document.createElement('div');
+                        you.className = 'text-right bg-indigo-100 px-2 py-1 rounded';
+                        you.innerText = text;
+                        messagesEl.appendChild(you);
+                        messagesEl.scrollTop = messagesEl.scrollHeight;
+
+                        conversation.push({
+                            role: 'user',
+                            content: text
+                        });
+                        input.value = '';
+
+                        try {
+                            const resp = await fetch("{% url 'api_chat' %}", {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify({
+                                    messages: conversation
+                                })
+                            });
+
+                            const {
+                                reply
+                            } = await resp.json();
+                            conversation.push({
+                                role: 'assistant',
+                                content: reply
+                            });
+
+                            const bot = document.createElement('div');
+                            bot.className = 'text-left bg-gray-100 px-2 py-1 rounded';
+                            bot.innerText = reply;
+                            messagesEl.appendChild(bot);
+                            messagesEl.scrollTop = messagesEl.scrollHeight;
+
+                        } catch (err) {
+                            console.error('Fetch error:', err);
+                            const netErr = document.createElement('div');
+                            netErr.className = 'text-left text-red-600 px-2 py-1 rounded';
+                            netErr.innerText = `Error de red: ${err.message}`;
+                            messagesEl.appendChild(netErr);
+                        }
+                    });
+                });
+            </script>
+</body>
+
+</html>

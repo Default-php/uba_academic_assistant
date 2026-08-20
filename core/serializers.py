@@ -4,6 +4,15 @@ from .models import (
     Grade, ConsultationResource, AgentInteraction
 )
 
+class RegisterSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(write_only=True)
+
+    class Meta:
+        model = User
+        fields = ['ci', 'nombre_completo', 'correo', 'password']
+
+    def create(self, validated_data):
+        return User.objects.create_user(**validated_data)
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:

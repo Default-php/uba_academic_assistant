@@ -1,19 +1,58 @@
+from django.conf import settings
 from django.db import models
 from django.core.validators import MinValueValidator, MaxValueValidator
+from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin, BaseUserManager
 
-class User(models.Model):
-    """Estudiantes registrados en la app."""
-    id = models.AutoField(primary_key=True)
-    nombre_completo = models.CharField(max_length=100)
+class CustomUserManager(BaseUserManager):
+    def create_user(self, ci, nombre_completo, correo, password=None, **extra_fields):
+        if not ci:
+            raise ValueError('El usuario debe tener una cédula')
+        if not correo:
+            raise ValueError('El usuario debe tener un correo')
+
+        email = self.normalize_email(correo)
+        user = self.model(ci=ci, nombre_completo=nombre_completo, correo=email, **extra_fields)
+        user.set_password(password)
+        user.save(using=self._db)
+        return user
+
+    def create_superuser(self, ci, nombre_completo, correo, password=None, **extra_fields):
+        extra_fields.setdefault('is_staff', True)
+        extra_fields.setdefault('is_superuser', True)
+
+        return self.create_user(ci, nombre_completo, correo, password, **extra_fields)
+
+class User(AbstractBaseUser, PermissionsMixin):
     ci = models.CharField(max_length=15, unique=True)
+    nombre_completo = models.CharField(max_length=100)
     correo = models.EmailField(unique=True)
-    clave_encriptada = models.CharField(max_length=255)
     carrera = models.CharField(max_length=100, null=True, blank=True)
     trimestre = models.PositiveSmallIntegerField(
         validators=[MinValueValidator(1), MaxValueValidator(12)],
         null=True,
-        blank=True)    
+        blank=True
+    )
     fecha_registro = models.DateTimeField(auto_now_add=True)
+
+    is_active = models.BooleanField(default=True)
+    is_staff  = models.BooleanField(default=False)
+
+    # ─── Campos para sincronización de evaluaciones ───
+    is_synced   = models.BooleanField(
+        default=False,
+        help_text="True si ya ejecutó el scraping de evaluaciones"
+    )
+    last_synced = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="Fecha/hora de la última sincronización"
+    )
+
+    objects = CustomUserManager()
+
+    USERNAME_FIELD  = 'ci'
+    REQUIRED_FIELDS = ['nombre_completo', 'correo']
+
     def __str__(self):
         return self.nombre_completo
 
@@ -27,8 +66,8 @@ class Subject(models.Model):
         validators=[MinValueValidator(1), MaxValueValidator(12)],
         null=True,
         blank=True)
-    creditos = models.PositiveSmallIntegerField()
-    docente_nombre = models.CharField(max_length=100)  # solo se guarda el nombre
+    creditos = models.PositiveSmallIntegerField(null= True, blank= True)
+    profesor = models.CharField(max_length=100, null= True, blank= True)  # solo se guarda el nombre
 
     def __str__(self):
         return f"{self.codigo} - {self.nombre}"
@@ -53,17 +92,37 @@ class Inscription(models.Model):
 
 
 class Evaluation(models.Model):
-    """Evaluaciones dentro de cada materia."""
-    id = models.AutoField(primary_key=True)
-    subject = models.ForeignKey(Subject, on_delete=models.CASCADE)
-    nombre = models.CharField(max_length=100)
-    tipo = models.CharField(max_length=20, choices=[('examen', 'Examen'), ('práctica', 'Práctica'), ('trabajo', 'Trabajo'), ('otro', 'Otro')])
-    fecha = models.DateField()
-    peso = models.DecimalField(max_digits=5, decimal_places=2)  # en porcentaje
-    instrucciones = models.TextField(null=True, blank=True)
+    # LIGA CADA EVALUACIÓN A UN USUARIO
+    user       = models.ForeignKey(
+                   settings.AUTH_USER_MODEL,
+                   on_delete=models.CASCADE,
+                   related_name='evaluations'
+                 )
+
+    subject    = models.ForeignKey(
+                   Subject,
+                   on_delete=models.CASCADE,
+                   related_name='evaluations'
+                 )
+    moodle_id  = models.CharField(max_length=20)
+    titulo     = models.TextField()
+    url        = models.URLField()
+    numero     = models.CharField(max_length=50, null=True, blank=True)
+    unidad     = models.CharField(max_length=50, null=True, blank=True)
+    tipo       = models.CharField(max_length=100, null=True, blank=True)
+    seccion    = models.CharField(max_length=50, null=True, blank=True)
+    profesor   = models.CharField(max_length=100, null=True, blank=True)
+    porcentaje = models.CharField(max_length=10, null=True, blank=True)
+    contenido_html = models.TextField(blank=True, null=True)
+    fecha_inicio   = models.CharField(max_length=100, null=True, blank=True)
+    fecha_cierre   = models.CharField(max_length=100, null=True, blank=True)
+
+    class Meta:
+        unique_together = ('user', 'moodle_id')
 
     def __str__(self):
-        return f"{self.nombre} ({self.subject})"
+        # Mostramos el título y materia
+        return f"{self.titulo} ({self.subject.nombre})"
 
 
 class Grade(models.Model):
