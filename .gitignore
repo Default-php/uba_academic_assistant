@@ -26,3 +26,6 @@ Thumbs.db
 
 # Contenido generado dinámicamente
 /media/
+
+# Código AI eliminado del repo (solo local, nunca comitear)
+ai_features/
