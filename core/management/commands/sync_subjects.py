@@ -1,41 +1,26 @@
 from django.core.management.base import BaseCommand
-from django.conf import settings
 
-from core.sync.subjects import scrape_subjects
-from core.models import Subject
+from core.scraping.client import MoodleClient
+from core.scraping.save import save_subjects
+from core.scraping.subjects import scrape_subjects
+
 
 class Command(BaseCommand):
     help = "Sincroniza las materias del portal UBA a la base de datos"
 
-    def handle(self, *args, **options):
-        # Obtenemos credenciales desde settings (o .env cargado ahí)
-        username = getattr(settings, "UBA_USERNAME", None)
-        password = getattr(settings, "UBA_PASSWORD", None)
-        if not username or not password:
-            self.stderr.write(
-                self.style.ERROR(
-                    "Faltan UBA_USERNAME/UBA_PASSWORD en settings"
-                )
-            )
-            return
+    def add_arguments(self, parser):
+        parser.add_argument("--ci", required=True, help="Cédula de acceso al campus")
+        parser.add_argument("--password", required=True, help="Contraseña de acceso al campus")
 
-        # Ejecutamos el scraper y guardamos resultados
-        materias = scrape_subjects(username, password)
+    def handle(self, *args, **options):
+        ci = options["ci"]
+        password = options["password"]
+
+        with MoodleClient(ci, password) as client:
+            materias = scrape_subjects(client)
+
+        save_subjects(materias)
         for m in materias:
-            obj, created = Subject.objects.get_or_create(
-                codigo=m["codigo"],
-                defaults={
-                    "nombre":    m["nombre"],
-                    "trimestre": m["trimestre"]
-                }
+            self.stdout.write(
+                f"Guardada: {m['nombre']} (ID {m['codigo']})"
             )
-            if created:
-                self.stdout.write(
-                    self.style.SUCCESS(
-                        f"✔ Guardada: {m['nombre']} (ID {m['codigo']})"
-                    )
-                )
-            else:
-                self.stdout.write(
-                    f"⏩ Ya existe: {m['nombre']} (ID {m['codigo']})"
-                )

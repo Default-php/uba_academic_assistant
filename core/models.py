@@ -106,7 +106,7 @@ class Evaluation(models.Model):
                  )
     moodle_id  = models.CharField(max_length=20)
     titulo     = models.TextField()
-    url        = models.URLField()
+    url        = models.URLField(null=True, blank=True)
     numero     = models.CharField(max_length=50, null=True, blank=True)
     unidad     = models.CharField(max_length=50, null=True, blank=True)
     tipo       = models.CharField(max_length=100, null=True, blank=True)
@@ -114,8 +114,8 @@ class Evaluation(models.Model):
     profesor   = models.CharField(max_length=100, null=True, blank=True)
     porcentaje = models.CharField(max_length=10, null=True, blank=True)
     contenido_html = models.TextField(blank=True, null=True)
-    fecha_inicio   = models.CharField(max_length=100, null=True, blank=True)
-    fecha_cierre   = models.CharField(max_length=100, null=True, blank=True)
+    fecha_inicio   = models.DateField(null=True, blank=True)
+    fecha_cierre   = models.DateField(null=True, blank=True)
 
     class Meta:
         unique_together = ('user', 'moodle_id')

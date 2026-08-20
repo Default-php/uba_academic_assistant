@@ -1,10 +1,15 @@
+"""Parsers de texto extraído del campus (títulos de evaluaciones y materias)."""
 import re
 from datetime import datetime
 
+from core.scraping.constants import ROMAN_NUMS
+
+
 def parse_evaluation_text(text):
     """
-    Recibe un string que representa una evaluación y devuelve un diccionario con los campos extraídos.
-    Campos posibles: numero, unidad, tipo, seccion, profesor, porcentaje, fecha_inicio, fecha_cierre
+    Recibe un string que representa una evaluación y devuelve un diccionario
+    con los campos extraídos: numero, unidad, tipo, seccion, profesor,
+    porcentaje, fecha_inicio, fecha_cierre.
     """
     resultado = {
         "numero": None,
@@ -67,12 +72,15 @@ def parse_evaluation_text(text):
 
     return resultado
 
-# Ejemplo de uso:
-if __name__ == "__main__":
-    ejemplos = [
-        "Actividad Sumativa N° 1 │ Unidad 1 │ Informe de Investigación │ Sección 1 │ Prof. Oswald Carvajal │ 25%│ Fecha de Inicio: 26/05/2025 │ Hora: 00:01 a.m. │ Fecha de Cierre: 30/05/2025 │ Hora: 23:59 p.m. │ Hora Venezuela │",
-        "Actividad sumativa 3: Plan de acción | Sección 1 | Tutora: Adriana Miranda | 25% | Desde el 23/06/2025 a las 00:01 am hasta el 27/06/2025 a las 23:59 pm (Hora Venezuela)"
-    ]
-    for texto in ejemplos:
-        print("\n---\nTexto:", texto)
-        print("Resultado:", parse_evaluation_text(texto))
+
+def extraer_trimestre_y_nombre(texto: str):
+    """
+    Dado un texto tipo "II.- - Nombre de Materia", devuelve
+    (trimestre_numérico, nombre_limpio).
+    """
+    match = re.match(r"^([IVXL]+)\.\s*-\s*(.+)$", texto.strip())
+    if match:
+        romano = match.group(1).strip()
+        nombre = match.group(2).strip()
+        return ROMAN_NUMS.get(romano.upper(), 0), nombre
+    return 0, texto

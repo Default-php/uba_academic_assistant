@@ -1,48 +1,45 @@
+from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand
-from django.conf import settings
 
-from core.sync.evaluations import scrape_evaluations
-from core.models import Subject, Evaluation
+from core.scraping.client import MoodleClient
+from core.scraping.evaluations import scrape_evaluations
+from core.scraping.save import save_evaluations
+
+User = get_user_model()
+
 
 class Command(BaseCommand):
     help = "Sincroniza las evaluaciones desde Moodle y descarga imágenes localmente"
 
+    def add_arguments(self, parser):
+        parser.add_argument(
+            "--ci",
+            required=True,
+            help="Cédula del usuario de la app (también usada como login del campus)",
+        )
+        parser.add_argument("--password", required=True, help="Contraseña de acceso al campus")
+
     def handle(self, *args, **options):
-        self.stdout.write("🔄 Iniciando sincronización de evaluaciones…")
+        ci = options["ci"]
+        password = options["password"]
 
-        # Ejecuta el scraper
-        entries = scrape_evaluations()
+        try:
+            user = User.objects.get(ci=ci)
+        except User.DoesNotExist:
+            self.stderr.write(self.style.ERROR(
+                f"No existe un usuario con cédula {ci}"
+            ))
+            return
 
-        # Persiste cada evaluación
+        with MoodleClient(ci, password) as client:
+            entries = scrape_evaluations(client)
+
+        save_evaluations(user, entries)
         for ev in entries:
-            # Encuentra la materia
-            try:
-                subj = Subject.objects.get(codigo=ev["subject_codigo"])
-            except Subject.DoesNotExist:
-                self.stderr.write(
-                    f"⚠️  Materia no encontrada: ID {ev['subject_codigo']}"
-                )
-                continue
-
-            obj, created = Evaluation.objects.update_or_create(
-                moodle_id=ev["moodle_id"],
-                defaults={
-                    "subject":       subj,
-                    "titulo":        ev["titulo"],
-                    "numero":        ev["numero"],
-                    "unidad":        ev["unidad"],
-                    "tipo":          ev["tipo"],
-                    "seccion":       ev["seccion"],
-                    "profesor":      ev["profesor"],
-                    "porcentaje":    ev["porcentaje"],
-                    "fecha_inicio":  ev["fecha_inicio"],
-                    "fecha_cierre":  ev["fecha_cierre"],
-                    "contenido_html":ev["contenido_html"],
-                }
+            self.stdout.write(
+                f"Guardada: {ev['titulo']} (ID {ev['moodle_id']})"
             )
-            status = "✔ Creada" if created else "⏩ Actualizada"
-            self.stdout.write(f"{status}: {ev['titulo']} (ID {ev['moodle_id']})")
 
         self.stdout.write(self.style.SUCCESS(
-            "✅ Sincronización de evaluaciones completada."
+            "Sincronización de evaluaciones completada."
         ))

@@ -1,56 +1,30 @@
 from django.core.management.base import BaseCommand
-from django.conf import settings
 
-from core.sync.professors import scrape_professors
-from core.models import Subject
+from core.scraping.client import MoodleClient
+from core.scraping.professors import scrape_professors
+from core.scraping.save import save_professors
+
 
 class Command(BaseCommand):
     help = "Sincroniza los nombres de los profesores para cada materia"
 
+    def add_arguments(self, parser):
+        parser.add_argument("--ci", required=True, help="Cédula de acceso al campus")
+        parser.add_argument("--password", required=True, help="Contraseña de acceso al campus")
+
     def handle(self, *args, **options):
-        # Credenciales desde settings (o .env cargado ahí)
-        username = getattr(settings, "UBA_USERNAME", None)
-        password = getattr(settings, "UBA_PASSWORD", None)
-        if not username or not password:
-            self.stderr.write(
-                self.style.ERROR(
-                    "Error: faltan UBA_USERNAME/UBA_PASSWORD en settings"
-                )
-            )
-            return
+        ci = options["ci"]
+        password = options["password"]
 
-        # Ejecutar scraper y actualizar cada Subject
-        profs = scrape_professors(username, password)
+        with MoodleClient(ci, password) as client:
+            profs = scrape_professors(client)
+
+        save_professors(profs)
         for entry in profs:
-            codigo   = entry["codigo"]
-            profesor = entry["profesor"]
+            self.stdout.write(
+                f"Profesor: {entry['profesor']} (ID {entry['codigo']})"
+            )
 
-            try:
-                subj = Subject.objects.get(codigo=codigo)
-            except Subject.DoesNotExist:
-                self.stderr.write(
-                    self.style.WARNING(
-                        f"⚠️  Materia no encontrada en BD: ID {codigo}"
-                    )
-                )
-                continue
-
-            # Solo guardar si encontramos un nombre válido
-            if profesor:
-                subj.profesor = profesor
-                subj.save(update_fields=["profesor"])
-                self.stdout.write(
-                    self.style.SUCCESS(
-                        f"✔ Profesor actualizado: {subj.nombre} → {profesor}"
-                    )
-                )
-            else:
-                self.stdout.write(
-                    self.style.WARNING(
-                        f"⚠️  Sin profesor para: {subj.nombre} (ID {codigo})"
-                    )
-                )
-
-        self.stdout.write(
-            self.style.SUCCESS("Sincronización de profesores completada.")
-        )
+        self.stdout.write(self.style.SUCCESS(
+            "Sincronización de profesores completada."
+        ))
