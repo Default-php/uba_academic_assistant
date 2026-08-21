@@ -59,6 +59,16 @@ class ScrapeProfessorsTests(TestCase):
         self.assertEqual(profs[0]["codigo"], "101")
         self.assertEqual(profs[0]["profesor"], "Oswald Carvajal")
 
+    def test_usa_textcontent_cuando_text_es_solo_espacios(self):
+        """Un .text de solo espacios es truthy pero no tiene nombre: se debe
+        normalizar antes de decidir y usar textContent como respaldo."""
+        driver = _FakeDriver(_FakeElement(text="   ", text_content="MARIA PEREZ"))
+        client = _FakeClient(driver)
+
+        profs = scrape_professors(client)
+
+        self.assertEqual(profs[0]["profesor"], "MARIA PEREZ")
+
     def test_usa_text_visible_cuando_existe(self):
         driver = _FakeDriver(_FakeElement(text="Ana Miranda"))
         client = _FakeClient(driver)

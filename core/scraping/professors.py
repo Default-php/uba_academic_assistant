@@ -21,7 +21,8 @@ def scrape_professors(client) -> list[dict]:
             # El bloque "messageteacher" puede estar oculto en el tema actual:
             # Selenium devuelve .text vacío para elementos no visibles, así que
             # se usa textContent como respaldo.
-            nombre = (span.text or span.get_attribute("textContent") or "").strip() or None
+            texto = (span.text or "").strip() or (span.get_attribute("textContent") or "").strip()
+            nombre = texto or None
         except Exception:
             nombre = None
         professors.append(
