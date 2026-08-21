@@ -2,6 +2,8 @@
 
 import logging
 
+from django.db import IntegrityError
+
 from core.models import Evaluation, Subject
 
 logger = logging.getLogger(__name__)
@@ -10,10 +12,18 @@ logger = logging.getLogger(__name__)
 def save_subjects(entries: list[dict]) -> None:
     """Guarda o actualiza materias por codigo."""
     for m in entries:
-        obj, created = Subject.objects.update_or_create(
-            codigo=m["codigo"],
-            defaults={"nombre": m["nombre"], "trimestre": m["trimestre"]},
-        )
+        try:
+            obj, created = Subject.objects.update_or_create(
+                codigo=m["codigo"],
+                defaults={"nombre": m["nombre"], "trimestre": m["trimestre"]},
+            )
+        except IntegrityError:
+            # Un renombre puede colisionar con el nombre único de otra materia;
+            # se omite esa entrada sin abortar la sincronización completa.
+            logger.warning(
+                "Materia con codigo %s no pudo guardarse (nombre duplicado)", m["codigo"]
+            )
+            continue
         logger.debug("%s: %s", "Creada" if created else "Ya existe", m["nombre"])
 
 

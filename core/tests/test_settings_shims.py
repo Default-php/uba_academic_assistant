@@ -20,3 +20,11 @@ class TimestampSignerShimTests(SimpleTestCase):
 
     def test_signer_es_el_compatible(self):
         self.assertIs(django_q.core_signing.TimestampSigner, CompatTimestampSigner)
+
+    def test_round_trip_con_la_convencion_de_django_q(self):
+        # django-q llama TimestampSigner(key, salt=salt) en core_signing.loads
+        signer = django_q.core_signing.TimestampSigner("clave-secreta", salt="django.core.signing")
+        signed = signer.sign(12345)
+        self.assertEqual(signer.unsign(signed), "12345")
+        self.assertEqual(signer.unsign(signed, max_age=None), "12345")
+        self.assertEqual(signer.unsign(signed, max_age=3600), "12345")

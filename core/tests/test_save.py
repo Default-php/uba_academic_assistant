@@ -34,6 +34,15 @@ class SaveSubjectsTests(TestCase):
         self.assertEqual(Subject.objects.count(), 1)
         self.assertEqual(Subject.objects.get(codigo="101").nombre, "Matemática Avanzada")
 
+    def test_nombre_colisionante_no_aborta_y_registra_warning(self):
+        Subject.objects.create(codigo="1", nombre="X", trimestre=1)
+        Subject.objects.create(codigo="2", nombre="Y", trimestre=1)
+        with self.assertLogs("core.scraping.save", level="WARNING") as logs:
+            save_subjects([{"codigo": "1", "nombre": "Y", "trimestre": 1}])
+        # La materia A conserva su nombre y el resto de la sincronización sigue
+        self.assertEqual(Subject.objects.get(codigo="1").nombre, "X")
+        self.assertTrue(any("codigo 1" in msg for msg in logs.output))
+
 
 class SaveProfessorsTests(TestCase):
     """save_professors actualiza el profesor de la materia por codigo."""

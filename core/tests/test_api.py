@@ -8,6 +8,7 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 
 from core.models import Evaluation, Subject
+from core.views import SubjectViewSet
 
 User = get_user_model()
 
@@ -95,17 +96,85 @@ class LogoutAPITests(APITestCase):
 class UserViewSetReadOnlyTests(APITestCase):
     """El viewset de usuarios es de solo lectura."""
 
-    def test_patch_usuario_devuelve_405(self):
-        user = User.objects.create_user(
+    def setUp(self):
+        self.user = User.objects.create_user(
             ci="111",
             nombre_completo="Ana",
             correo="ana@example.com",
             password="secreta123",
         )
-        self.client.force_authenticate(user=user)
-        url = reverse("user-detail", args=[user.pk])
-        response = self.client.patch(url, {"nombre_completo": "Ana B"})
-        self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+        self.client.force_authenticate(user=self.user)
+
+    def test_metodos_de_escritura_devuelven_405(self):
+        url = reverse("user-detail", args=[self.user.pk])
+        for method in ("patch", "put", "delete"):
+            with self.subTest(method=method):
+                response = getattr(self.client, method)(url, {"nombre_completo": "Ana B"})
+                self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+
+    def test_me_no_expone_campos_sensibles(self):
+        url = reverse("user-me")
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        for campo in ("is_staff", "is_superuser", "password"):
+            self.assertNotIn(campo, response.data)
+
+
+class UserOwnershipTests(APITestCase):
+    """Un usuario no staff solo puede ver su propio perfil."""
+
+    def setUp(self):
+        self.user_a = User.objects.create_user(
+            ci="111", nombre_completo="Ana", correo="ana@example.com"
+        )
+        self.user_b = User.objects.create_user(
+            ci="222", nombre_completo="Beto", correo="beto@example.com"
+        )
+
+    def test_no_staff_no_puede_ver_otro_usuario(self):
+        self.client.force_authenticate(user=self.user_a)
+        url = reverse("user-detail", args=[self.user_b.pk])
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+
+class SubjectViewSetFilteringTests(APITestCase):
+    """Cada usuario solo ve sus materias y las evaluaciones prefetched."""
+
+    def setUp(self):
+        self.user_a = User.objects.create_user(
+            ci="111", nombre_completo="Ana", correo="ana@example.com"
+        )
+        self.user_b = User.objects.create_user(
+            ci="222", nombre_completo="Beto", correo="beto@example.com"
+        )
+        self.subject_a = Subject.objects.create(codigo="101", nombre="Matemática", trimestre=1)
+        self.subject_b = Subject.objects.create(codigo="102", nombre="Física", trimestre=1)
+        Evaluation.objects.create(
+            user=self.user_a, subject=self.subject_a, moodle_id="a1", titulo="Eval A"
+        )
+        Evaluation.objects.create(
+            user=self.user_b, subject=self.subject_b, moodle_id="b1", titulo="Eval B"
+        )
+
+    def test_filtra_materias_y_evaluaciones_por_usuario(self):
+        for user, codigo, moodle_id in (
+            (self.user_a, "101", "a1"),
+            (self.user_b, "102", "b1"),
+        ):
+            with self.subTest(user=user.ci):
+                self.client.force_authenticate(user=user)
+                url = reverse("subject-list")
+                response = self.client.get(url)
+                self.assertEqual(response.status_code, status.HTTP_200_OK)
+                self.assertEqual(len(response.data), 1)
+                self.assertEqual(response.data[0]["codigo"], codigo)
+
+                # El prefetch (to_attr="user_evals") solo trae las evaluaciones del usuario
+                viewset = SubjectViewSet()
+                viewset.request = type("FakeRequest", (), {"user": user})()
+                subj = viewset.get_queryset().get()
+                self.assertEqual([e.moodle_id for e in subj.user_evals], [moodle_id])
 
 
 class EvaluationViewSetTests(APITestCase):
