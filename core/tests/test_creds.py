@@ -30,9 +30,11 @@ class ResolveCredsTests(SimpleTestCase):
         ci, password = resolve_creds(None, "argpass")
         self.assertEqual((ci, password), ("222", "argpass"))
 
-    @patch.dict("os.environ", {"UBA_USER_CI": "222"})
+    @patch.dict("os.environ", {"UBA_USER_CI": "222", "UBA_USER_PASSWD": ""})
     @patch("core.utils.creds.getpass", return_value="prompted")
     def test_pide_password_por_prompt_si_no_hay_env(self, mock_getpass):
+        # UBA_USER_PASSWD vacío simula que .env no trae contraseña: el test
+        # no debe depender de las credenciales reales del .env local.
         ci, password = resolve_creds(None, None)
         self.assertEqual((ci, password), ("222", "prompted"))
         mock_getpass.assert_called_once()

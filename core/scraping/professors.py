@@ -18,7 +18,10 @@ def scrape_professors(client) -> list[dict]:
         client.go(course_url)
         try:
             span = client.driver.find_element(By.CSS_SELECTOR, TEACHER_LINK_SELECTOR)
-            nombre = span.text.strip()
+            # El bloque "messageteacher" puede estar oculto en el tema actual:
+            # Selenium devuelve .text vacío para elementos no visibles, así que
+            # se usa textContent como respaldo.
+            nombre = (span.text or span.get_attribute("textContent") or "").strip() or None
         except Exception:
             nombre = None
         professors.append(
