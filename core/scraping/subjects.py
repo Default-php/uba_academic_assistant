@@ -1,6 +1,8 @@
 """Scraping de materias del campus UBA."""
 
+from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
 
 from core.scraping.constants import COURSE_LINK_SELECTOR, COURSES_URL
 from core.scraping.parsers import extraer_trimestre_y_nombre
@@ -13,6 +15,15 @@ def scrape_subjects(client) -> list[dict]:
     Devuelve lista de dicts: {"codigo", "nombre", "trimestre"}.
     """
     client.go(COURSES_URL)
+
+    # Espera a que aparezca el primer enlace de materia; si no aparece,
+    # devuelve lista vacía como antes (no lanza).
+    try:
+        WebDriverWait(client.driver, 30).until(
+            lambda d: d.find_elements(By.CSS_SELECTOR, COURSE_LINK_SELECTOR)
+        )
+    except TimeoutException:
+        return []
 
     links = client.driver.find_elements(By.CSS_SELECTOR, COURSE_LINK_SELECTOR)
 
