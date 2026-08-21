@@ -286,3 +286,9 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 CORS_ALLOW_ALL_ORIGINS = True
 
 AUTH_USER_MODEL = "core.User"
+
+# OpenAI (asistente de chat). La clave es opcional: la app arranca sin ella
+# y el endpoint de chat responde 503 hasta que se configure en .env.
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
+OPENAI_DEFAULT_MODEL = os.getenv("OPENAI_DEFAULT_MODEL", "gpt-3.5-turbo")
+OPENAI_MAX_TOKENS = int(os.getenv("OPENAI_MAX_TOKENS", "1200"))

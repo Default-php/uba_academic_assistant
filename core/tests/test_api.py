@@ -3,6 +3,7 @@
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
+from django.test import override_settings
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
@@ -202,3 +203,52 @@ class EvaluationViewSetTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 1)
         self.assertEqual(response.data[0]["moodle_id"], "a1")
+
+
+class AssistantChatAPITests(APITestCase):
+    """Endpoint de chat del asistente (/api/chat/)."""
+
+    def setUp(self):
+        self.user = User.objects.create_user(
+            ci="111",
+            nombre_completo="Ana",
+            correo="ana@example.com",
+            password="secreta123",
+        )
+        self.url = reverse("api_chat")
+        self.payload = {"messages": [{"role": "user", "content": "hola"}]}
+
+    def test_anonimo_devuelve_401(self):
+        response = self.client.post(self.url, self.payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.json()["error"], "Autenticación requerida")
+
+    def test_sin_api_key_devuelve_503(self):
+        self.client.force_login(self.user)
+        with override_settings(OPENAI_API_KEY=""):
+            response = self.client.post(self.url, self.payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_503_SERVICE_UNAVAILABLE)
+        self.assertIn("OPENAI_API_KEY", response.json()["error"])
+
+    def test_con_api_key_devuelve_reply(self):
+        self.client.force_login(self.user)
+        with override_settings(OPENAI_API_KEY="sk-test"):
+            with patch(
+                "core.view.assistant.chat_with_gpt",
+                return_value={"role": "assistant", "content": "hola"},
+            ):
+                response = self.client.post(self.url, self.payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.json()["reply"], "hola")
+
+    def test_json_invalido_devuelve_400(self):
+        self.client.force_login(self.user)
+        response = self.client.post(self.url, data="no-json", content_type="application/json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.json()["error"], "JSON inválido")
+
+    def test_messages_vacio_devuelve_400(self):
+        self.client.force_login(self.user)
+        response = self.client.post(self.url, {"messages": []}, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("messages", response.json()["error"])

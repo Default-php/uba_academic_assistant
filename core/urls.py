@@ -5,8 +5,12 @@ from rest_framework_simplejwt.views import (
     TokenRefreshView,
 )
 
+from core.view.assistant import AssistantAPIView
+
 from .views import (
+    AgentInteractionViewSet,
     ConsultationResourceViewSet,
+    EvaluationChatView,
     EvaluationViewSet,
     GradeViewSet,
     InscriptionViewSet,
@@ -24,6 +28,7 @@ router.register(r"inscriptions", InscriptionViewSet)
 router.register(r"evaluations", EvaluationViewSet)
 router.register(r"grades", GradeViewSet)
 router.register(r"resources", ConsultationResourceViewSet)
+router.register(r"interactions", AgentInteractionViewSet)
 
 
 urlpatterns = [
@@ -34,4 +39,6 @@ urlpatterns = [
     path("login/", TokenObtainPairView.as_view(), name="token_obtain_pair"),
     path("refresh/", TokenRefreshView.as_view(), name="token_refresh"),
     path("logout/", LogoutView.as_view(), name="token_logout"),
+    path("api/chat/", AssistantAPIView.as_view(), name="api_chat"),
+    path("chat/<int:eval_id>/", EvaluationChatView.as_view(), name="evaluation_chat"),
 ]

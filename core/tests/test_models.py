@@ -4,7 +4,7 @@ from django.contrib.auth import get_user_model
 from django.db import IntegrityError
 from django.test import TestCase
 
-from core.models import Evaluation, Subject
+from core.models import AgentInteraction, Evaluation, Subject
 
 User = get_user_model()
 
@@ -62,3 +62,31 @@ class SubjectStrTests(TestCase):
     def test_str(self):
         subject = Subject(codigo="101", nombre="Matemática")
         self.assertEqual(str(subject), "101 - Matemática")
+
+
+class AgentInteractionTests(TestCase):
+    """Modelo AgentInteraction (historial del asistente)."""
+
+    def setUp(self):
+        self.user = User.objects.create_user(
+            ci="111", nombre_completo="Ana", correo="ana@example.com"
+        )
+
+    def test_create_y_str(self):
+        interaction = AgentInteraction.objects.create(
+            usuario=self.user,
+            pregunta="¿Cuándo es el parcial?",
+            respuesta_generada="El 15 de agosto.",
+            intencion_detectada="consulta_fecha",
+            confianza="0.85",
+        )
+        self.assertEqual(AgentInteraction.objects.count(), 1)
+        self.assertEqual(str(interaction), "Ana → consulta_fecha")
+
+    def test_str_sin_intencion(self):
+        interaction = AgentInteraction.objects.create(
+            usuario=self.user,
+            pregunta="Hola",
+            respuesta_generada="Hola, ¿en qué te ayudo?",
+        )
+        self.assertEqual(str(interaction), "Ana → Pregunta")

@@ -147,3 +147,19 @@ class ConsultationResource(models.Model):
 
     def __str__(self):
         return f"{self.titulo} ({self.tipo})"
+
+
+class AgentInteraction(models.Model):
+    """Historial de preguntas y respuestas entre el usuario y el asistente."""
+
+    id = models.AutoField(primary_key=True)
+    usuario = models.ForeignKey(User, on_delete=models.CASCADE)
+    pregunta = models.TextField()
+    respuesta_generada = models.TextField()
+    fecha_hora = models.DateTimeField(auto_now_add=True)
+    intencion_detectada = models.CharField(max_length=100, null=True, blank=True)
+    # Ej: 0.85
+    confianza = models.DecimalField(max_digits=4, decimal_places=2, null=True, blank=True)
+
+    def __str__(self):
+        return f"{self.usuario} → {self.intencion_detectada or 'Pregunta'}"

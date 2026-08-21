@@ -1,6 +1,14 @@
 from rest_framework import serializers
 
-from .models import ConsultationResource, Evaluation, Grade, Inscription, Subject, User
+from .models import (
+    AgentInteraction,
+    ConsultationResource,
+    Evaluation,
+    Grade,
+    Inscription,
+    Subject,
+    User,
+)
 
 
 class RegisterSerializer(serializers.ModelSerializer):
@@ -57,4 +65,10 @@ class GradeSerializer(serializers.ModelSerializer):
 class ConsultationResourceSerializer(serializers.ModelSerializer):
     class Meta:
         model = ConsultationResource
+        fields = "__all__"
+
+
+class AgentInteractionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AgentInteraction
         fields = "__all__"
