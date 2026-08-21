@@ -39,6 +39,6 @@ urlpatterns = [
     path("login/", TokenObtainPairView.as_view(), name="token_obtain_pair"),
     path("refresh/", TokenRefreshView.as_view(), name="token_refresh"),
     path("logout/", LogoutView.as_view(), name="token_logout"),
-    path("api/chat/", AssistantAPIView.as_view(), name="api_chat"),
+    path("chat/", AssistantAPIView.as_view(), name="api_chat"),
     path("chat/<int:eval_id>/", EvaluationChatView.as_view(), name="evaluation_chat"),
 ]

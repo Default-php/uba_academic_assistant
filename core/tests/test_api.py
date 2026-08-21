@@ -218,6 +218,9 @@ class AssistantChatAPITests(APITestCase):
         self.url = reverse("api_chat")
         self.payload = {"messages": [{"role": "user", "content": "hola"}]}
 
+    def test_ruta_resuelve_a_api_chat(self):
+        self.assertEqual(reverse("api_chat"), "/api/chat/")
+
     def test_anonimo_devuelve_401(self):
         response = self.client.post(self.url, self.payload, format="json")
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
