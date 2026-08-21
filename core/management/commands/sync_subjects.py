@@ -12,7 +12,10 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument("--ci", required=True, help="Cédula de acceso al campus")
-        parser.add_argument("--password", help="Contraseña de acceso al campus (si se omite, se pide de forma segura)")
+        parser.add_argument(
+            "--password",
+            help="Contraseña de acceso al campus (si se omite, se pide de forma segura)",
+        )
 
     def handle(self, *args, **options):
         ci = options["ci"]
@@ -24,6 +27,4 @@ class Command(BaseCommand):
 
         save_subjects(materias)
         for m in materias:
-            self.stdout.write(
-                f"Guardada: {m['nombre']} (ID {m['codigo']})"
-            )
+            self.stdout.write(f"Guardada: {m['nombre']} (ID {m['codigo']})")

@@ -12,7 +12,10 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument("--ci", required=True, help="Cédula de acceso al campus")
-        parser.add_argument("--password", help="Contraseña de acceso al campus (si se omite, se pide de forma segura)")
+        parser.add_argument(
+            "--password",
+            help="Contraseña de acceso al campus (si se omite, se pide de forma segura)",
+        )
 
     def handle(self, *args, **options):
         ci = options["ci"]
@@ -24,10 +27,6 @@ class Command(BaseCommand):
 
         save_professors(profs)
         for entry in profs:
-            self.stdout.write(
-                f"Profesor: {entry['profesor']} (ID {entry['codigo']})"
-            )
+            self.stdout.write(f"Profesor: {entry['profesor']} (ID {entry['codigo']})")
 
-        self.stdout.write(self.style.SUCCESS(
-            "Sincronización de profesores completada."
-        ))
+        self.stdout.write(self.style.SUCCESS("Sincronización de profesores completada."))

@@ -1,5 +1,6 @@
 from django.contrib import admin
-from .models import User, Subject, Inscription, Evaluation, Grade, ConsultationResource
+
+from .models import ConsultationResource, Evaluation, Grade, Inscription, Subject, User
 
 admin.site.register(User)
 admin.site.register(Subject)

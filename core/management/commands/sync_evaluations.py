@@ -19,7 +19,10 @@ class Command(BaseCommand):
             required=True,
             help="Cédula del usuario de la app (también usada como login del campus)",
         )
-        parser.add_argument("--password", help="Contraseña de acceso al campus (si se omite, se pide de forma segura)")
+        parser.add_argument(
+            "--password",
+            help="Contraseña de acceso al campus (si se omite, se pide de forma segura)",
+        )
 
     def handle(self, *args, **options):
         ci = options["ci"]
@@ -36,10 +39,6 @@ class Command(BaseCommand):
 
         save_evaluations(user, entries)
         for ev in entries:
-            self.stdout.write(
-                f"Guardada: {ev['titulo']} (ID {ev['moodle_id']})"
-            )
+            self.stdout.write(f"Guardada: {ev['titulo']} (ID {ev['moodle_id']})")
 
-        self.stdout.write(self.style.SUCCESS(
-            "Sincronización de evaluaciones completada."
-        ))
+        self.stdout.write(self.style.SUCCESS("Sincronización de evaluaciones completada."))

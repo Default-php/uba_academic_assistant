@@ -1,4 +1,5 @@
 """Parsers de texto extraído del campus (títulos de evaluaciones y materias)."""
+
 import re
 from datetime import datetime
 
@@ -19,7 +20,7 @@ def parse_evaluation_text(text):
         "profesor": None,
         "porcentaje": None,
         "fecha_inicio": None,
-        "fecha_cierre": None
+        "fecha_cierre": None,
     }
 
     # Convertir a minúscula sin afectar nombres propios (evitar problemas con REGEX)
@@ -46,24 +47,35 @@ def parse_evaluation_text(text):
         resultado["seccion"] = match.group(1).strip()
 
     # Profesor
-    match = re.search(r"(?:[Pp]rof(?:\.?)|[Tt]utor(?:a)?[:\s]*)\s*([A-Z][A-Za-zÁÉÍÓÚÑñ\s\.]+)", texto)
+    match = re.search(
+        r"(?:[Pp]rof(?:\.?)|[Tt]utor(?:a)?[:\s]*)\s*([A-Z][A-Za-zÁÉÍÓÚÑñ\s\.]+)", texto
+    )
     if match:
         resultado["profesor"] = match.group(1).strip()
 
     # Tipo de evaluación: lo que está entre número/unidad y sección/profesor
-    match = re.search(r"(?:Unidad\s*[\dIVX]+\s*\|?|\d\s*\||[\dIVX]+\s*\||\|)\s*([^|\n]{5,50}?)\s*\|\s*(?:[Ss]ecci[oó]n|[Pp]rof|[Tt]utor)", texto)
+    match = re.search(
+        r"(?:Unidad\s*[\dIVX]+\s*\|?|\d\s*\||[\dIVX]+\s*\||\|)\s*([^|\n]{5,50}?)\s*\|\s*(?:[Ss]ecci[oó]n|[Pp]rof|[Tt]utor)",
+        texto,
+    )
     if match:
         resultado["tipo"] = match.group(1).strip()
 
     # Fechas (inicio y cierre)
     # Manejar diferentes patrones de fechas con regex
-    match_fechas = re.findall(r"(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})\s*(a las)?\s*(\d{1,2}:\d{2})?", texto)
+    match_fechas = re.findall(
+        r"(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})\s*(a las)?\s*(\d{1,2}:\d{2})?", texto
+    )
     if len(match_fechas) >= 2:
         try:
             f1 = match_fechas[0][0].replace("-", "/")
             f2 = match_fechas[1][0].replace("-", "/")
-            resultado["fecha_inicio"] = datetime.strptime(f1, "%d/%m/%Y") if len(f1.split("/")) == 3 else None
-            resultado["fecha_cierre"] = datetime.strptime(f2, "%d/%m/%Y") if len(f2.split("/")) == 3 else None
+            resultado["fecha_inicio"] = (
+                datetime.strptime(f1, "%d/%m/%Y") if len(f1.split("/")) == 3 else None
+            )
+            resultado["fecha_cierre"] = (
+                datetime.strptime(f2, "%d/%m/%Y") if len(f2.split("/")) == 3 else None
+            )
         except Exception:
             pass
 

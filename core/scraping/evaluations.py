@@ -1,4 +1,5 @@
 """Scraping de evaluaciones del campus UBA."""
+
 import os
 import re
 import time
@@ -24,8 +25,8 @@ def remove_time_param(url: str) -> str:
     """Elimina el parámetro 'time' de la URL si existe."""
     parsed = urllib.parse.urlparse(url)
     query = urllib.parse.parse_qs(parsed.query)
-    if 'time' in query:
-        del query['time']
+    if "time" in query:
+        del query["time"]
     new_q = urllib.parse.urlencode(query, doseq=True)
     return urllib.parse.urlunparse(parsed._replace(query=new_q))
 
@@ -56,7 +57,7 @@ def scrape_evaluations(client) -> list[dict]:
             links = client.driver.find_elements(By.CSS_SELECTOR, ACTIVITY_LINK_SELECTOR)
             enlace = links[idx]
             try:
-                href = enlace.get_attribute('href')
+                href = enlace.get_attribute("href")
                 moodle_id = href.split("id=")[-1]
 
                 # Título bruto
@@ -79,7 +80,9 @@ def scrape_evaluations(client) -> list[dict]:
                     soup = BeautifulSoup(html, "html.parser")
 
                     # --- limpiar videos ---
-                    for video in soup.find_all("div", class_=lambda c: c and "mediaplugin_videojs" in c):
+                    for video in soup.find_all(
+                        "div", class_=lambda c: c and "mediaplugin_videojs" in c
+                    ):
                         iframes = video.find_all("iframe")
                         if iframes:
                             new_c = soup.new_tag("div", **{"class": "video-embed-group"})
@@ -90,9 +93,12 @@ def scrape_evaluations(client) -> list[dict]:
                                         "iframe",
                                         src=src,
                                         frameborder="0",
-                                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture",
+                                        allow=(
+                                            "accelerometer; autoplay; clipboard-write; "
+                                            "encrypted-media; gyroscope; picture-in-picture"
+                                        ),
                                         allowfullscreen="true",
-                                        style="width:100%; max-width:600px; height:350px;"
+                                        style="width:100%; max-width:600px; height:350px;",
                                     )
                                     new_c.append(clean_iframe)
                             video.replace_with(new_c)
@@ -120,8 +126,8 @@ def scrape_evaluations(client) -> list[dict]:
                                 ext = ".png" if "png" in ct else ".jpg"
                                 fname = base + ext
 
-                            safe = re.sub(r'\s+', '_', base)
-                            safe = re.sub(r'[^\w\-]', '', safe)
+                            safe = re.sub(r"\s+", "_", base)
+                            safe = re.sub(r"[^\w\-]", "", safe)
                             new_name = f"eval_{moodle_id}_{j}_{safe}{ext}"
 
                             media_dir = os.path.join(settings.MEDIA_ROOT, "evaluaciones")
@@ -149,27 +155,29 @@ def scrape_evaluations(client) -> list[dict]:
                     fecha_cierre = fecha_cierre.date()
 
                 # Acumula datos
-                results.append({
-                    "subject_codigo": subject.codigo,
-                    "moodle_id":      moodle_id,
-                    "titulo":         titulo_raw,
-                    "numero":         datos.get("numero"),
-                    "unidad":         datos.get("unidad"),
-                    "tipo":           datos.get("tipo"),
-                    "seccion":        datos.get("seccion"),
-                    "profesor":       datos.get("profesor"),
-                    "porcentaje":     datos.get("porcentaje"),
-                    "fecha_inicio":   fecha_inicio,
-                    "fecha_cierre":   fecha_cierre,
-                    "contenido_html": contenido_html,
-                    "url":            href,
-                })
+                results.append(
+                    {
+                        "subject_codigo": subject.codigo,
+                        "moodle_id": moodle_id,
+                        "titulo": titulo_raw,
+                        "numero": datos.get("numero"),
+                        "unidad": datos.get("unidad"),
+                        "tipo": datos.get("tipo"),
+                        "seccion": datos.get("seccion"),
+                        "profesor": datos.get("profesor"),
+                        "porcentaje": datos.get("porcentaje"),
+                        "fecha_inicio": fecha_inicio,
+                        "fecha_cierre": fecha_cierre,
+                        "contenido_html": contenido_html,
+                        "url": href,
+                    }
+                )
 
                 # Vuelve al listado de la materia
                 client.go(course_url)
                 time.sleep(1)
 
             except Exception as exc:
-                print(f"Error evaluación #{idx+1} en {subject.nombre}: {exc}")
+                print(f"Error evaluación #{idx + 1} en {subject.nombre}: {exc}")
 
     return results

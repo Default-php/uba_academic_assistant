@@ -1,4 +1,5 @@
 """Scraping de profesores del campus UBA."""
+
 from selenium.webdriver.common.by import By
 
 from core.models import Subject
@@ -20,9 +21,11 @@ def scrape_professors(client) -> list[dict]:
             nombre = span.text.strip()
         except Exception:
             nombre = None
-        professors.append({
-            "codigo": subj.codigo,
-            "profesor": nombre,
-        })
+        professors.append(
+            {
+                "codigo": subj.codigo,
+                "profesor": nombre,
+            }
+        )
 
     return professors

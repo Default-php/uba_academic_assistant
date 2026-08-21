@@ -1,6 +1,7 @@
 # core/tasks.py
 
 import logging
+
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 
@@ -12,6 +13,7 @@ from core.scraping.subjects import scrape_subjects
 
 logger = logging.getLogger(__name__)
 User = get_user_model()
+
 
 def sync_for_user(user_id: int, ci: str, password: str):
     # 1) Obtener usuario o abortar
@@ -50,9 +52,9 @@ def sync_for_user(user_id: int, ci: str, password: str):
             save_evaluations(user, evals_data)
 
         # 6) Marcar sincronización completa
-        user.is_synced   = True
+        user.is_synced = True
         user.last_synced = timezone.now()
-        user.save(update_fields=['is_synced', 'last_synced'])
+        user.save(update_fields=["is_synced", "last_synced"])
         logger.info("[SYNC END] Usuario %s sincronizado con éxito.", user_id)
 
     except Exception as e:

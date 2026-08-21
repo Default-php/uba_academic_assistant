@@ -1,4 +1,5 @@
 """Scraping de materias del campus UBA."""
+
 from selenium.webdriver.common.by import By
 
 from core.scraping.constants import COURSE_LINK_SELECTOR, COURSES_URL
@@ -21,10 +22,12 @@ def scrape_subjects(client) -> list[dict]:
         raw = link.find_element(By.CLASS_NAME, "multiline").text.strip()
         code = href.split("id=")[-1]
         trimestre, nombre = extraer_trimestre_y_nombre(raw)
-        materias.append({
-            "codigo": code,
-            "nombre": nombre,
-            "trimestre": trimestre,
-        })
+        materias.append(
+            {
+                "codigo": code,
+                "nombre": nombre,
+                "trimestre": trimestre,
+            }
+        )
 
     return materias

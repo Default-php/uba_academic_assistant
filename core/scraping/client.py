@@ -1,4 +1,5 @@
 """Cliente Moodle: Chrome headless con sesión de login y cookies para requests."""
+
 import time
 
 import requests

@@ -4,8 +4,8 @@
 # que el scraping funciona.
 
 # URLs
-BASE_URL   = "https://pregrado.campusvirtualuba.net.ve/trimestre/"
-LOGIN_URL  = BASE_URL + "login/index.php"
+BASE_URL = "https://pregrado.campusvirtualuba.net.ve/trimestre/"
+LOGIN_URL = BASE_URL + "login/index.php"
 COURSES_URL = BASE_URL + "my/courses.php"
 
 # Selectores CSS
@@ -21,7 +21,16 @@ PASSWORD_FIELD_ID = "password"
 
 # Números romanos usados para el trimestre
 ROMAN_NUMS = {
-    'I': 1,   'II': 2,  'III': 3, 'IV': 4,
-    'V': 5,   'VI': 6,  'VII': 7, 'VIII': 8,
-    'IX': 9,  'X': 10,  'XI': 11, 'XII': 12
+    "I": 1,
+    "II": 2,
+    "III": 3,
+    "IV": 4,
+    "V": 5,
+    "VI": 6,
+    "VII": 7,
+    "VIII": 8,
+    "IX": 9,
+    "X": 10,
+    "XI": 11,
+    "XII": 12,
 }
