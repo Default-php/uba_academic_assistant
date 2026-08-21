@@ -1,11 +1,10 @@
-from getpass import getpass
-
 from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand, CommandError
 
 from core.scraping.client import MoodleClient
 from core.scraping.evaluations import scrape_evaluations
 from core.scraping.save import save_evaluations
+from core.utils.creds import resolve_creds
 
 User = get_user_model()
 
@@ -16,17 +15,15 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument(
             "--ci",
-            required=True,
-            help="Cédula del usuario de la app (también usada como login del campus)",
+            help="Cédula del usuario de la app (o UBA_USER_CI en .env; también login del campus)",
         )
         parser.add_argument(
             "--password",
-            help="Contraseña de acceso al campus (si se omite, se pide de forma segura)",
+            help="Contraseña de acceso al campus (o UBA_USER_PASSWD en .env; si falta, se pide)",
         )
 
     def handle(self, *args, **options):
-        ci = options["ci"]
-        password = options["password"] or getpass("Contraseña del campus: ")
+        ci, password = resolve_creds(options["ci"], options["password"])
 
         try:
             user = User.objects.get(ci=ci)
