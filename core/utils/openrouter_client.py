@@ -58,7 +58,10 @@ def chat_with_model(
     response = requests.post(OPENROUTER_URL, headers=headers, json=payload, timeout=60)
     response.raise_for_status()
 
-    msg = response.json()["choices"][0]["message"]
+    try:
+        msg = response.json()["choices"][0]["message"]
+    except (KeyError, IndexError, TypeError) as exc:
+        raise ChatUnavailableError("Respuesta inesperada de OpenRouter") from exc
     return {
         "role": msg.get("role") or "assistant",
         "content": msg.get("content") or "",

@@ -47,6 +47,7 @@ class OpenRouterClientChatTests(SimpleTestCase):
         self.assertEqual(args[0], "https://openrouter.ai/api/v1/chat/completions")
         self.assertEqual(kwargs["headers"]["Authorization"], "Bearer clave-falsa")
         self.assertEqual(kwargs["headers"]["Content-Type"], "application/json")
+        self.assertEqual(kwargs["headers"]["HTTP-Referer"], "https://uba-assistant.local")
         self.assertEqual(kwargs["headers"]["X-Title"], "UBA Assistant")
         self.assertEqual(kwargs["json"]["model"], "meta-llama/llama-3.3-70b-instruct:free")
         self.assertEqual(kwargs["json"]["messages"], messages)
@@ -76,3 +77,14 @@ class OpenRouterClientChatTests(SimpleTestCase):
 
         with self.assertRaises(RuntimeError):
             chat_with_model([{"role": "user", "content": "hola"}])
+
+    @override_settings(OPENROUTER_API_KEY="clave-falsa")
+    @patch("core.utils.openrouter_client.requests.post")
+    def test_respuesta_inesperada_lanza_chat_unavailable(self, mock_post):
+        mock_response = Mock()
+        mock_response.json.return_value = {"foo": "bar"}
+        mock_post.return_value = mock_response
+
+        with self.assertRaises(ChatUnavailableError) as ctx:
+            chat_with_model([{"role": "user", "content": "hola"}])
+        self.assertEqual(str(ctx.exception), "Respuesta inesperada de OpenRouter")
