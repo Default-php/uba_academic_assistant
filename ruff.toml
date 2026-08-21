@@ -1,0 +1,10 @@
+line-length = 100
+target-version = "py310"
+
+[lint]
+select = ["E", "F", "I", "W", "UP"]
+ignore = []
+
+[lint.per-file-ignores]
+"uba_assistant/settings.py" = ["E402"]   # monkeypatch bloque requiere import al inicio
+"core/migrations/*.py" = ["E501"]        # migraciones generadas por Django, no se editan a mano

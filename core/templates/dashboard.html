@@ -75,6 +75,7 @@
                 <div id="sync-spinner" class="hidden text-indigo-600 font-medium">
                     ⏳ Sincronizando…
                 </div>
+                <p id="sync-error" class="hidden text-red-600 font-medium"></p>
 
                 <a id="logout-btn" href="{% url 'logout' %}" class="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700">
       Cerrar sesión
@@ -103,17 +104,17 @@
                                     <p class="text-sm text-gray-600">
                                         <strong>Tipo:</strong> {{ ev.tipo }} |
                                         <strong>Unidad:</strong> {{ ev.unidad }} |
-                                        <strong>Fecha:</strong> {{ ev.fecha_inicio|date:"d/m/Y" }} – {{ ev.fecha_cierre|date:"d/m/Y" }}
+                                        <strong>Fecha:</strong> {{ ev.fecha_inicio|date:"d/m/Y"|default:"—" }} – {{ ev.fecha_cierre|date:"d/m/Y"|default:"—" }}
                                     </p>
                                 </div>
-                                <!-- NUEVO: botón Chat -->
-                                <button class="chat-btn bg-green-600 text-white px-2 py-1 rounded hover:bg-green-700 mr-2" data-eval-id="{{ ev.pk }}" data-materia="{{ ev.subject.nombre|escape }}" data-title="{{ ev.titulo|escape }}" data-student-name="{{ user.nombre_completo|escape }}"
-                                    data-assistant-info="Eres un asistente virtual para una app web de la Universidad Bicentenaria de Aragua; brinda detalles precisos de la universidad si se te solicitan y ayuda con la evaluación proporcionada.">
-                                    💬 Chat
-                                </button>
                                 <!-- toggle original -->
                                 <button class="toggle-btn" data-target="evaluation-{{ ev.pk }}">
                                     <span class="chevron">&#9660;</span>
+                                </button>
+                                <!-- botón Chat -->
+                                <button class="chat-btn bg-green-600 text-white px-2 py-1 rounded hover:bg-green-700 mr-2" data-eval-id="{{ ev.pk }}" data-materia="{{ ev.subject.nombre|escape }}" data-title="{{ ev.titulo|escape }}" data-student-name="{{ user.nombre_completo|escape }}"
+                                    data-assistant-info="Eres un asistente virtual para una app web de la Universidad Bicentenaria de Aragua; brinda detalles precisos de la universidad si se te solicitan y ayuda con la evaluación proporcionada.">
+                                    💬 Chat
                                 </button>
                             </div>
 
@@ -137,18 +138,20 @@
             <p class="text-gray-500">Aún no has sincronizado ninguna evaluación.</p>
             {% endfor %}
 
+            {% endif %}
+
             <!-- ——— Panel de chat al final del dashboard ——— -->
-            <div id="chat-panel" class="hidden 
-         w-full 
-         bg-white shadow-inner 
-         flex flex-col 
-         mt-8 mb-8 
-         rounded-lg border border-gray-200 
-         overflow-hidden 
+            <div id="chat-panel" class="hidden
+         w-full
+         bg-white shadow-inner
+         flex flex-col
+         mt-8 mb-8
+         rounded-lg border border-gray-200
+         overflow-hidden
          max-h-[70vh]">
                 <!-- Cabecera -->
-                <div class="flex-none flex items-center justify-between 
-           bg-indigo-600 text-white 
+                <div class="flex-none flex items-center justify-between
+           bg-indigo-600 text-white
            px-4 py-2 rounded-t-lg">
                     <h3 class="font-semibold">Asistente UBA</h3>
                     <button id="chat-close" class="text-xl leading-none">&times;</button>
@@ -158,18 +161,16 @@
                 <div id="chat-panel-messages" class="flex-1 overflow-y-auto px-4 py-2 space-y-2 text-sm bg-gray-50"></div>
 
                 <!-- Formulario de envío (siempre visible) -->
-                <form id="chat-panel-form" class="flex-none flex items-center border-t 
+                <form id="chat-panel-form" class="flex-none flex items-center border-t
            px-4 py-2 bg-white">
-                    <input id="chat-panel-input" type="text" placeholder="Escribe tu pregunta…" class="flex-grow px-3 py-2 mr-2 
-             focus:outline-none rounded-md 
+                    <input id="chat-panel-input" type="text" placeholder="Escribe tu pregunta…" class="flex-grow px-3 py-2 mr-2
+             focus:outline-none rounded-md
              border border-gray-300" autocomplete="off" />
                     <button type="submit" class="bg-indigo-600 text-white px-4 py-2 rounded-md">
       Enviar
     </button>
                 </form>
             </div>
-
-            {% endif %}
 
             <!-- Toggles de evaluación y materia -->
             <script>
@@ -212,17 +213,28 @@
                 document.addEventListener('DOMContentLoaded', () => {
                     const syncBtn = document.getElementById('sync-btn');
                     const spinner = document.getElementById('sync-spinner');
-                    if (!syncBtn || !spinner) {
-                        console.error('No encuentro sync-btn o sync-spinner en el DOM');
+                    const syncError = document.getElementById('sync-error');
+                    if (!syncBtn || !spinner || !syncError) {
+                        console.error('No encuentro sync-btn, sync-spinner o sync-error en el DOM');
                         return;
                     }
 
+                    function showError(msg) {
+                        syncError.textContent = msg;
+                        syncError.classList.remove('hidden');
+                    }
+
+                    function clearError() {
+                        syncError.textContent = '';
+                        syncError.classList.add('hidden');
+                    }
+
                     syncBtn.addEventListener('click', async() => {
-                        console.log('👉 Click en Sincronizar'); // <-- debug
                         const ci = prompt('Ingresa tu CI:');
                         const password = prompt('Ingresa tu contraseña UBA:');
                         if (!ci || !password) return;
 
+                        clearError();
                         spinner.classList.remove('hidden');
 
                         try {
@@ -238,27 +250,46 @@
                                     password
                                 })
                             });
-                            console.log('sync POST status:', res.status);
 
-                            // Polling del estado
+                            if (!res.ok) {
+                                spinner.classList.add('hidden');
+                                showError('No se pudo iniciar la sincronización. Intenta de nuevo.');
+                                return;
+                            }
+
+                            // Polling del estado (máx. 90 intentos ~ 3 min)
+                            let attempts = 0;
                             const check = setInterval(async() => {
-                                const resp = await fetch('/api/users/sync-status/', {
-                                    credentials: 'same-origin'
-                                });
-                                const {
-                                    is_synced
-                                } = await resp.json();
-                                console.log('is_synced?', is_synced);
-                                if (is_synced) {
+                                attempts += 1;
+                                try {
+                                    const resp = await fetch('/api/users/sync-status/', {
+                                        credentials: 'same-origin'
+                                    });
+                                    if (!resp.ok) throw new Error('status');
+                                    const {
+                                        is_synced
+                                    } = await resp.json();
+                                    if (is_synced) {
+                                        clearInterval(check);
+                                        spinner.classList.add('hidden');
+                                        clearError();
+                                        window.location.reload();
+                                    } else if (attempts >= 90) {
+                                        clearInterval(check);
+                                        spinner.classList.add('hidden');
+                                        showError('La sincronización tardó demasiado. Intenta de nuevo.');
+                                    }
+                                } catch (err) {
                                     clearInterval(check);
                                     spinner.classList.add('hidden');
-                                    window.location.reload();
+                                    showError('Error al consultar el estado de la sincronización.');
                                 }
                             }, 2000);
 
                         } catch (err) {
                             console.error('Error en sync:', err);
                             spinner.classList.add('hidden');
+                            showError('Error de conexión al iniciar la sincronización.');
                         }
                     });
                 });
@@ -412,6 +443,7 @@
                     });
                 });
             </script>
+
 </body>
 
 </html>

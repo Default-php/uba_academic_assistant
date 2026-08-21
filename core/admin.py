@@ -1,5 +1,14 @@
 from django.contrib import admin
-from .models import User, Subject, Inscription, Evaluation, Grade, ConsultationResource, AgentInteraction
+
+from .models import (
+    AgentInteraction,
+    ConsultationResource,
+    Evaluation,
+    Grade,
+    Inscription,
+    Subject,
+    User,
+)
 
 admin.site.register(User)
 admin.site.register(Subject)

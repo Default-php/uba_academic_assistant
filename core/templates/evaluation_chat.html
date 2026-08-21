@@ -1,0 +1,102 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Chat — {{ eval.titulo }}</title>
+    <link href="{% static 'css/output.css' %}" rel="stylesheet">
+    <style>
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-50 text-gray-900">
+    <div class="max-w-3xl mx-auto px-4 py-8">
+        <a href="{% url 'dashboard' %}" class="text-sm text-indigo-600 hover:underline">← Volver al panel</a>
+
+        <h1 class="text-3xl font-bold mt-4 mb-2">{{ eval.titulo }}</h1>
+        <p class="text-sm text-gray-600 mb-6">
+            <strong>Materia:</strong> {{ eval.subject.nombre }}
+        </p>
+
+        <div class="bg-white shadow rounded-lg p-6 mb-6">
+            <h2 class="text-lg font-semibold mb-2">Contexto de la evaluación</h2>
+            <p class="text-sm text-gray-700 whitespace-pre-wrap">{{ plain_text }}</p>
+        </div>
+
+        <!-- Panel de chat -->
+        <div id="chat-panel" class="w-full bg-white shadow-inner flex flex-col rounded-lg border border-gray-200 overflow-hidden max-h-[70vh]">
+            <div class="flex-none flex items-center justify-between bg-indigo-600 text-white px-4 py-2 rounded-t-lg">
+                <h3 class="font-semibold">Asistente UBA</h3>
+            </div>
+
+            <div id="chat-panel-messages" class="flex-1 overflow-y-auto px-4 py-2 space-y-2 text-sm bg-gray-50"></div>
+
+            <form id="chat-panel-form" class="flex-none flex items-center border-t px-4 py-2 bg-white">
+                <input id="chat-panel-input" type="text" placeholder="Escribe tu pregunta…" class="flex-grow px-3 py-2 mr-2 focus:outline-none rounded-md border border-gray-300" autocomplete="off" />
+                <button type="submit" class="bg-indigo-600 text-white px-4 py-2 rounded-md">Enviar</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const form = document.getElementById('chat-panel-form');
+            const input = document.getElementById('chat-panel-input');
+            const messagesEl = document.getElementById('chat-panel-messages');
+            if (!form || !input || !messagesEl) return;
+
+            const context = document.querySelector('.whitespace-pre-wrap').innerText.trim();
+            const conversation = [{
+                role: 'system',
+                content: `Eres un asistente virtual para una app web de la Universidad Bicentenaria de Aragua; brinda detalles precisos de la universidad si se te solicitan y ayuda con la evaluación proporcionada.\n\nContexto de la evaluación:\n${context}`
+            }];
+
+            form.addEventListener('submit', async e => {
+                e.preventDefault();
+                const text = input.value.trim();
+                if (!text) return;
+
+                const you = document.createElement('div');
+                you.className = 'text-right bg-indigo-100 px-2 py-1 rounded';
+                you.innerText = text;
+                messagesEl.appendChild(you);
+                messagesEl.scrollTop = messagesEl.scrollHeight;
+
+                conversation.push({ role: 'user', content: text });
+                input.value = '';
+
+                try {
+                    const resp = await fetch("{% url 'api_chat' %}", {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ messages: conversation })
+                    });
+
+                    const data = await resp.json();
+                    const reply = data.reply || (data.error || 'Error desconocido');
+                    conversation.push({ role: 'assistant', content: reply });
+
+                    const bot = document.createElement('div');
+                    bot.className = 'text-left bg-gray-100 px-2 py-1 rounded';
+                    bot.innerText = reply;
+                    messagesEl.appendChild(bot);
+                    messagesEl.scrollTop = messagesEl.scrollHeight;
+                } catch (err) {
+                    console.error('Fetch error:', err);
+                    const netErr = document.createElement('div');
+                    netErr.className = 'text-left text-red-600 px-2 py-1 rounded';
+                    netErr.innerText = `Error de red: ${err.message}`;
+                    messagesEl.appendChild(netErr);
+                }
+            });
+        });
+    </script>
+</body>
+
+</html>
