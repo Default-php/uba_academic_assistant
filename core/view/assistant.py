@@ -1,51 +1,46 @@
-# core/views/assistant.py
+"""Vista del endpoint de chat del asistente."""
 
 import json
 import logging
-import traceback
 
-from django.conf import settings
 from django.http import JsonResponse
+from django.utils.decorators import method_decorator
 from django.views import View
 from django.views.decorators.csrf import csrf_exempt
-from django.utils.decorators import method_decorator
 
-from core.utils.openai_client import chat_with_gpt
+from core.utils.openrouter_client import ChatUnavailableError, chat_with_model
 
 logger = logging.getLogger(__name__)
 
-@method_decorator(csrf_exempt, name='dispatch')
+
+@method_decorator(csrf_exempt, name="dispatch")
 class AssistantAPIView(View):
     """
-    Endpoint que recibe JSON { messages: [ { role, content }, … ] }
-    y responde { reply: '…' }. Usa chat_with_gpt para invocar a OpenAI.
+    Endpoint que recibe JSON { messages: [ { role, content }, ... ] }
+    y responde { reply: '...' }. Usa chat_with_model para invocar a OpenRouter.
     """
+
     def post(self, request, *args, **kwargs):
-        # 1) Parseo del body
+        if not request.user.is_authenticated:
+            return JsonResponse({"error": "Autenticación requerida"}, status=401)
+
         try:
-            payload = json.loads(request.body.decode('utf-8'))
+            payload = json.loads(request.body.decode("utf-8"))
         except json.JSONDecodeError:
-            return JsonResponse({'error': 'JSON inválido'}, status=400)
+            return JsonResponse({"error": "JSON inválido"}, status=400)
 
-        # 2) Validación de messages
-        messages = payload.get('messages')
+        messages = payload.get("messages")
         if not isinstance(messages, list) or not messages:
-            return JsonResponse(
-                {'error': 'Debe enviar un array "messages" no vacío'},
-                status=400
-            )
+            return JsonResponse({"error": 'Debe enviar un array "messages" no vacío'}, status=400)
 
-        # 3) Llamada al helper de OpenAI
         try:
-            result = chat_with_gpt(messages)
-            return JsonResponse({'reply': result['content']})
-
-        except Exception as exc:
-            # Log completo en servidor
+            result = chat_with_model(messages)
+            return JsonResponse({"reply": result["content"]})
+        except ChatUnavailableError:
+            return JsonResponse(
+                {"error": "El asistente no está configurado (falta OPENROUTER_API_KEY)"},
+                status=503,
+            )
+        except Exception:
             logger.exception("Error en AssistantAPIView")
-
-            # Devuelve siempre el mensaje de error real + traza
-            return JsonResponse({
-                'error': str(exc),
-                'trace': traceback.format_exc()
-            }, status=500)
+            return JsonResponse({"error": "Error interno del asistente"}, status=500)

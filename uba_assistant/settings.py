@@ -16,36 +16,31 @@ import types
 
 # Solo inyectamos el shim si Django no restaura el módulo real
 # (así no se sombrea una versión futura que lo vuelva a incluir).
-if 'django.utils.baseconv' not in sys.modules:
-    _baseconv = types.ModuleType('django.utils.baseconv')
+if "django.utils.baseconv" not in sys.modules:
+    _baseconv = types.ModuleType("django.utils.baseconv")
 
     # Copia fiel de django/utils/baseconv.py de Django 4.2 (licencia BSD).
-    BASE2_ALPHABET = '01'
-    BASE16_ALPHABET = '0123456789ABCDEF'
-    BASE56_ALPHABET = '23456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz'
-    BASE36_ALPHABET = '0123456789abcdefghijklmnopqrstuvwxyz'
-    BASE62_ALPHABET = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
-    BASE64_ALPHABET = BASE62_ALPHABET + '-_'
-
+    BASE2_ALPHABET = "01"
+    BASE16_ALPHABET = "0123456789ABCDEF"
+    BASE56_ALPHABET = "23456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz"
+    BASE36_ALPHABET = "0123456789abcdefghijklmnopqrstuvwxyz"
+    BASE62_ALPHABET = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+    BASE64_ALPHABET = BASE62_ALPHABET + "-_"
 
     class BaseConverter:
-        decimal_digits = '0123456789'
+        decimal_digits = "0123456789"
 
-        def __init__(self, digits, sign='-'):
+        def __init__(self, digits, sign="-"):
             self.sign = sign
             self.digits = digits
             if sign in self.digits:
-                raise ValueError('Sign character found in converter base digits.')
+                raise ValueError("Sign character found in converter base digits.")
 
         def __repr__(self):
-            return '<%s: base%s (%s)>' % (
-                self.__class__.__name__,
-                len(self.digits),
-                self.digits,
-            )
+            return f"<{self.__class__.__name__}: base{len(self.digits)} ({self.digits})>"
 
         def encode(self, i):
-            neg, value = self.convert(i, self.decimal_digits, self.digits, '-')
+            neg, value = self.convert(i, self.decimal_digits, self.digits, "-")
             if neg:
                 return self.sign + value
             return value
@@ -53,7 +48,7 @@ if 'django.utils.baseconv' not in sys.modules:
         def decode(self, s):
             neg, value = self.convert(s, self.digits, self.decimal_digits, self.sign)
             if neg:
-                value = '-' + value
+                value = "-" + value
             return int(value)
 
         def convert(self, number, from_digits, to_digits, sign):
@@ -72,20 +67,19 @@ if 'django.utils.baseconv' not in sys.modules:
             if x == 0:
                 res = to_digits[0]
             else:
-                res = ''
+                res = ""
                 while x > 0:
                     digit = x % len(to_digits)
                     res = to_digits[digit] + res
                     x = int(x // len(to_digits))
             return neg, res
 
-
     base2 = BaseConverter(BASE2_ALPHABET)
     base16 = BaseConverter(BASE16_ALPHABET)
     base36 = BaseConverter(BASE36_ALPHABET)
     base56 = BaseConverter(BASE56_ALPHABET)
     base62 = BaseConverter(BASE62_ALPHABET)
-    base64 = BaseConverter(BASE64_ALPHABET, sign='$')
+    base64 = BaseConverter(BASE64_ALPHABET, sign="$")
 
     _baseconv.BASE2_ALPHABET = BASE2_ALPHABET
     _baseconv.BASE16_ALPHABET = BASE16_ALPHABET
@@ -100,20 +94,24 @@ if 'django.utils.baseconv' not in sys.modules:
     _baseconv.base56 = base56
     _baseconv.base62 = base62
     _baseconv.base64 = base64
-    sys.modules['django.utils.baseconv'] = _baseconv
+    sys.modules["django.utils.baseconv"] = _baseconv
 
-from django.core.signing import TimestampSigner as _DjangoTS
-import django_q.core_signing
 import os
+
+import django_q.core_signing
+from django.core.signing import TimestampSigner as _DjangoTS
+
 
 class CompatTimestampSigner(_DjangoTS):
     """
-    Extiende el TimestampSigner de Django>=4 
+    Extiende el TimestampSigner de Django>=4
     para aceptar key y salt como args posicionales,
     tal y como django-q espera llamarlo.
     """
-    def __init__(self, key=None, salt=None, sep=':', **kwargs):
+
+    def __init__(self, key=None, salt=None, sep=":", **kwargs):
         super().__init__(key=key, salt=salt, sep=sep, **kwargs)
+
 
 # Sustituimos el signer interno de django-q por el compatible
 django_q.core_signing.TimestampSigner = CompatTimestampSigner
@@ -121,172 +119,178 @@ django_q.core_signing.TimestampSigner = CompatTimestampSigner
 
 from datetime import timedelta
 from pathlib import Path
+
 from dotenv import load_dotenv
 
 # Cargamos el .env desde python-dotenv
-env_path = Path(__file__).resolve().parent.parent / '.env'
+env_path = Path(__file__).resolve().parent.parent / ".env"
 load_dotenv(env_path)
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Seguridad: la clave se lee del entorno, nunca se commitea
-SECRET_KEY = os.getenv('SECRET_KEY')
+SECRET_KEY = os.getenv("SECRET_KEY")
 
-DEBUG = os.getenv('DEBUG', '1') == '1'
+DEBUG = os.getenv("DEBUG", "1") == "1"
 
 ALLOWED_HOSTS = [
     host.strip()
-    for host in os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
+    for host in os.getenv("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
     if host.strip()
 ]
 
 # Static files (CSS, JavaScript, Images)
-STATIC_URL = '/static/'
+STATIC_URL = "/static/"
 STATICFILES_DIRS = [
     BASE_DIR / "static",
 ]
 
 # Archivos media (por ejemplo, las imágenes descargadas)
-MEDIA_URL = '/media/'
+MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
 # Application definition
 INSTALLED_APPS = [
-    'django.contrib.admin',
-    'django.contrib.auth',
-    'django.contrib.contenttypes',
-    'django.contrib.sessions',
-    'django.contrib.messages',
-    'django.contrib.staticfiles',
-    'django_q',
-
+    "django.contrib.admin",
+    "django.contrib.auth",
+    "django.contrib.contenttypes",
+    "django.contrib.sessions",
+    "django.contrib.messages",
+    "django.contrib.staticfiles",
+    "django_q",
     # Apps de terceros
-    'rest_framework',
-    'drf_yasg',
-    'corsheaders',
-
+    "rest_framework",
+    "drf_yasg",
+    "corsheaders",
     # Mi aplicación
-    'core',
+    "core",
 ]
-INSTALLED_APPS += ['rest_framework_simplejwt.token_blacklist']
+INSTALLED_APPS += ["rest_framework_simplejwt.token_blacklist"]
 
 Q_CLUSTER = {
-    'name': 'DjangoQCluster',
-    'workers': 5,          # número de procesos worker
-    'timeout': 500,         # tiempo máximo (s) por tarea
-    'retry': 1000,          # reintentos en caso de fallo (s)
-    'queue_limit': 50,     # tamaño máximo de cola
-    'bulk': 15,            # cuántas tareas coge cada worker a la vez
-    'orm': 'default',      # usa la base de datos de Django como broker
-        # <<< desactiva por completo tareas programadas >>>
-    'poll': 0,
-
+    "name": "DjangoQCluster",
+    "workers": 5,  # número de procesos worker
+    "timeout": 500,  # tiempo máximo (s) por tarea
+    "retry": 1000,  # reintentos en caso de fallo (s)
+    "queue_limit": 50,  # tamaño máximo de cola
+    "bulk": 15,  # cuántas tareas coge cada worker a la vez
+    "orm": "default",  # usa la base de datos de Django como broker
+    # <<< desactiva por completo tareas programadas >>>
+    "poll": 0,
 }
 
 SIMPLE_JWT = {
-    'BLACKLIST_AFTER_ROTATION': True,
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
+    "BLACKLIST_AFTER_ROTATION": True,
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=60),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=1),
 }
 
 MIDDLEWARE = [
-    'django.middleware.security.SecurityMiddleware',
-    'corsheaders.middleware.CorsMiddleware',  # Añadimos aquí
-    'django.contrib.sessions.middleware.SessionMiddleware',
-    'django.middleware.common.CommonMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
-    'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'django.contrib.messages.middleware.MessageMiddleware',
-    'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    "django.middleware.security.SecurityMiddleware",
+    "corsheaders.middleware.CorsMiddleware",  # Añadimos aquí
+    "django.contrib.sessions.middleware.SessionMiddleware",
+    "django.middleware.common.CommonMiddleware",
+    "django.middleware.csrf.CsrfViewMiddleware",
+    "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "django.contrib.messages.middleware.MessageMiddleware",
+    "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
-ROOT_URLCONF = 'uba_assistant.urls'
+ROOT_URLCONF = "uba_assistant.urls"
 
 TEMPLATES = [
     {
-        'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
-        'APP_DIRS': True,
-        'OPTIONS': {
-            'context_processors': [
-                'django.template.context_processors.request',
-                'django.contrib.auth.context_processors.auth',
-                'django.contrib.messages.context_processors.messages',
+        "BACKEND": "django.template.backends.django.DjangoTemplates",
+        "DIRS": [],
+        "APP_DIRS": True,
+        "OPTIONS": {
+            "context_processors": [
+                "django.template.context_processors.request",
+                "django.contrib.auth.context_processors.auth",
+                "django.contrib.messages.context_processors.messages",
             ],
         },
     },
 ]
 
-WSGI_APPLICATION = 'uba_assistant.wsgi.application'
+WSGI_APPLICATION = "uba_assistant.wsgi.application"
 
 # Base de datos PostgreSQL configurada desde variables de entorno
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.getenv('DB_NAME', 'uba_assistant_db'),
-        'USER': os.getenv('DB_USER', 'uba_user'),
-        'PASSWORD': os.getenv('DB_PASSWORD', ''),
-        'HOST': os.getenv('DB_HOST', '127.0.0.1'),
-        'PORT': os.getenv('DB_PORT', '5432'),
+    "default": {
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": os.getenv("DB_NAME", "uba_assistant_db"),
+        "USER": os.getenv("DB_USER", "uba_user"),
+        "PASSWORD": os.getenv("DB_PASSWORD", ""),
+        "HOST": os.getenv("DB_HOST", "127.0.0.1"),
+        "PORT": os.getenv("DB_PORT", "5432"),
     }
 }
 
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
     {
-        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
+        "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+        "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
+        "NAME": "django.contrib.auth.password_validation.CommonPasswordValidator",
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
+        "NAME": "django.contrib.auth.password_validation.NumericPasswordValidator",
     },
 ]
 
 SWAGGER_SETTINGS = {
-    'DEFAULT_AUTO_SCHEMA_CLASS': 'drf_yasg.inspectors.SwaggerAutoSchema',
+    "DEFAULT_AUTO_SCHEMA_CLASS": "drf_yasg.inspectors.SwaggerAutoSchema",
 }
 
 REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES': [
-        'rest_framework.authentication.SessionAuthentication',
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "rest_framework.authentication.SessionAuthentication",
+        "rest_framework_simplejwt.authentication.JWTAuthentication",
     ]
 }
 
 LOGGING = {
-    'version': 1,
-    'disable_existing_loggers': False,
-    'handlers': {
-        'console': {
-            'class': 'logging.StreamHandler',
+    "version": 1,
+    "disable_existing_loggers": False,
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
         },
     },
-    'root': {
-        'handlers': ['console'],
-        'level': 'INFO',    # Cambia a 'DEBUG' si quieres ver los logger.debug()
+    "root": {
+        "handlers": ["console"],
+        "level": "INFO",  # Cambia a 'DEBUG' si quieres ver los logger.debug()
     },
 }
 
 # Internationalization
-LOGIN_URL = '/login-page/'
-LOGIN_REDIRECT_URL = '/dashboard/'
+LOGIN_URL = "/login-page/"
+LOGIN_REDIRECT_URL = "/dashboard/"
 
-LANGUAGE_CODE = 'en-us'
+LANGUAGE_CODE = "en-us"
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = "UTC"
 
 USE_I18N = True
 
 USE_TZ = True
 
 # Default primary key field type
-DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 CORS_ALLOW_ALL_ORIGINS = True
 
-AUTH_USER_MODEL = 'core.User'
+AUTH_USER_MODEL = "core.User"
+
+# OpenRouter (asistente de chat). La clave es opcional: la app arranca sin
+# ella y el endpoint de chat responde 503 hasta que se configure en .env.
+OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
+OPENROUTER_DEFAULT_MODEL = os.getenv(
+    "OPENROUTER_DEFAULT_MODEL", "meta-llama/llama-3.3-70b-instruct:free"
+)
+OPENROUTER_MAX_TOKENS = int(os.getenv("OPENROUTER_MAX_TOKENS", "1200"))

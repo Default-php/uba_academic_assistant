@@ -9,11 +9,11 @@ https://docs.djangoproject.com/en/5.2/howto/deployment/asgi/
 
 import os
 
-from django.core.asgi import get_asgi_application
 import dotenv
+from django.core.asgi import get_asgi_application
 
-dotenv.load_dotenv(os.path.join(os.path.dirname(__file__), '.env'))
+dotenv.load_dotenv(os.path.join(os.path.dirname(__file__), ".env"))
 
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'uba_assistant.settings')
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "uba_assistant.settings")
 
 application = get_asgi_application()
