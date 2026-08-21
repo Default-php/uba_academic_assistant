@@ -287,8 +287,10 @@ CORS_ALLOW_ALL_ORIGINS = True
 
 AUTH_USER_MODEL = "core.User"
 
-# OpenAI (asistente de chat). La clave es opcional: la app arranca sin ella
-# y el endpoint de chat responde 503 hasta que se configure en .env.
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
-OPENAI_DEFAULT_MODEL = os.getenv("OPENAI_DEFAULT_MODEL", "gpt-3.5-turbo")
-OPENAI_MAX_TOKENS = int(os.getenv("OPENAI_MAX_TOKENS", "1200"))
+# OpenRouter (asistente de chat). La clave es opcional: la app arranca sin
+# ella y el endpoint de chat responde 503 hasta que se configure en .env.
+OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
+OPENROUTER_DEFAULT_MODEL = os.getenv(
+    "OPENROUTER_DEFAULT_MODEL", "meta-llama/llama-3.3-70b-instruct:free"
+)
+OPENROUTER_MAX_TOKENS = int(os.getenv("OPENROUTER_MAX_TOKENS", "1200"))

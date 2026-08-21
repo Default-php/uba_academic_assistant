@@ -225,16 +225,16 @@ class AssistantChatAPITests(APITestCase):
 
     def test_sin_api_key_devuelve_503(self):
         self.client.force_login(self.user)
-        with override_settings(OPENAI_API_KEY=""):
+        with override_settings(OPENROUTER_API_KEY=""):
             response = self.client.post(self.url, self.payload, format="json")
         self.assertEqual(response.status_code, status.HTTP_503_SERVICE_UNAVAILABLE)
-        self.assertIn("OPENAI_API_KEY", response.json()["error"])
+        self.assertIn("OPENROUTER_API_KEY", response.json()["error"])
 
     def test_con_api_key_devuelve_reply(self):
         self.client.force_login(self.user)
-        with override_settings(OPENAI_API_KEY="sk-test"):
+        with override_settings(OPENROUTER_API_KEY="clave-falsa"):
             with patch(
-                "core.view.assistant.chat_with_gpt",
+                "core.view.assistant.chat_with_model",
                 return_value={"role": "assistant", "content": "hola"},
             ):
                 response = self.client.post(self.url, self.payload, format="json")
